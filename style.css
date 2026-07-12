@@ -38,3 +38,84 @@ label{display:block;margin:14px 0 7px;font-size:14px;font-weight:700;color:var(-
 .student-highlight{margin-top:14px;padding:12px;border-radius:10px;background:var(--light-blue);color:var(--navy);font-weight:800}
 @media(max-width:1000px){.summary-grid{grid-template-columns:repeat(2,1fr)}.student-header{grid-template-columns:1fr 1fr}.student-main,.student-actions{grid-column:1/-1}.student-actions{justify-content:flex-start}}
 @media(max-width:700px){.topbar{flex-direction:column;align-items:flex-start;padding:18px}.container{padding:16px}.summary-grid,.toolbar,.form-grid{grid-template-columns:1fr}.full-width{grid-column:auto}}
+
+
+/* COLLAPSIBLE STUDENT CARDS */
+
+.toolbar {
+  grid-template-columns: 2fr 1fr auto;
+}
+
+.toolbar-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.student-toggle-area {
+  cursor: pointer;
+}
+
+.student-toggle-area:focus {
+  outline: 3px solid rgba(31, 95, 153, 0.14);
+  outline-offset: -3px;
+}
+
+.student-toggle-area button {
+  cursor: pointer;
+}
+
+.student-title-block {
+  min-width: 0;
+}
+
+.student-name-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.expand-arrow {
+  width: 18px;
+  flex: 0 0 18px;
+  padding-top: 3px;
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 800;
+  transition: transform 0.2s ease;
+}
+
+.session-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #eef2f6;
+  color: var(--gray-700);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.student-details {
+  border-top: 1px solid var(--gray-100);
+}
+
+.student-card.collapsed .student-header {
+  border-bottom: 0;
+}
+
+.student-card.expanded .student-header {
+  border-bottom: 1px solid var(--gray-100);
+}
+
+@media (max-width: 700px) {
+  .toolbar-buttons {
+    width: 100%;
+  }
+
+  .toolbar-buttons button {
+    flex: 1;
+  }
+}

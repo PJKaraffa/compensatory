@@ -1,6 +1,15 @@
-SPED COMPENSATORY SERVICES VERSION 2
+SPED COMPENSATORY SERVICES V2 - COLLAPSIBLE STUDENTS
 
-The visual appearance is intentionally unchanged.
+This version keeps the approved visual design and adds:
+
+- Student cards collapsed by default
+- Expand/collapse by clicking the student header
+- Expand All and Collapse All buttons
+- Session-count badges
+- The selected student stays expanded after saving or deleting a service
+- Correct district-wide remaining hours for providers
+- Providers still see only their own individual service rows
+- Administrators see all provider rows
 
 FILES
 login.html
@@ -10,11 +19,12 @@ login.js
 app.js
 supabase-config.js
 setup.sql
+README.txt
 
-IMPORTANT
-1. Put your Supabase URL and anon key into supabase-config.js.
-2. Upload all web files to the same GitHub Pages folder.
-3. Open login.html.
-4. Use Ctrl+F5 after replacing app.js.
+IMPORTANT SQL FUNCTION
+The JavaScript requires public.get_student_hour_totals().
+Use the function SQL already provided in the project setup.
 
-The updated JavaScript supports bigint IDs returned as either numbers or strings.
+UPLOAD
+Upload all files to the same GitHub Pages folder.
+Then use Ctrl+F5 to force the new JavaScript and CSS to load.

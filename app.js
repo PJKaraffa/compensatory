@@ -8,6 +8,10 @@ let currentProfile = null;
 
 let students = [];
 let serviceSessions = [];
+let studentHourTotals = [];
+
+const expandedStudentIds = new Set();
+let lastOpenedStudentId = null;
 
 
 // ======================================================
@@ -54,41 +58,116 @@ async function initializeApp() {
 // ======================================================
 
 function attachEvents() {
-  document
-    .getElementById("logoutButton")
-    .addEventListener("click", logout);
+  const logoutButton =
+    document.getElementById("logoutButton");
 
-  document
-    .getElementById("refreshButton")
-    .addEventListener("click", loadDashboard);
+  const refreshButton =
+    document.getElementById("refreshButton");
 
-  document
-    .getElementById("addStudentButton")
-    .addEventListener("click", openAddStudentModal);
+  const addStudentButton =
+    document.getElementById("addStudentButton");
 
-  document
-    .getElementById("saveStudentButton")
-    .addEventListener("click", saveStudent);
+  const saveStudentButton =
+    document.getElementById("saveStudentButton");
 
-  document
-    .getElementById("saveServiceButton")
-    .addEventListener("click", saveServiceSession);
+  const saveServiceButton =
+    document.getElementById("saveServiceButton");
 
-  document
-    .getElementById("exportButton")
-    .addEventListener("click", exportCsv);
+  const exportButton =
+    document.getElementById("exportButton");
 
-  document
-    .getElementById("searchInput")
-    .addEventListener("input", renderStudents);
+  const searchInput =
+    document.getElementById("searchInput");
 
-  document
-    .getElementById("schoolFilter")
-    .addEventListener("change", renderStudents);
+  const schoolFilter =
+    document.getElementById("schoolFilter");
 
-  document
-    .getElementById("studentList")
-    .addEventListener("click", handleStudentButtonClick);
+  const studentList =
+    document.getElementById("studentList");
+
+  const expandAllButton =
+    document.getElementById("expandAllButton");
+
+  const collapseAllButton =
+    document.getElementById("collapseAllButton");
+
+
+  if (logoutButton) {
+    logoutButton.addEventListener(
+      "click",
+      logout
+    );
+  }
+
+  if (refreshButton) {
+    refreshButton.addEventListener(
+      "click",
+      loadDashboard
+    );
+  }
+
+  if (addStudentButton) {
+    addStudentButton.addEventListener(
+      "click",
+      openAddStudentModal
+    );
+  }
+
+  if (saveStudentButton) {
+    saveStudentButton.addEventListener(
+      "click",
+      saveStudent
+    );
+  }
+
+  if (saveServiceButton) {
+    saveServiceButton.addEventListener(
+      "click",
+      saveServiceSession
+    );
+  }
+
+  if (exportButton) {
+    exportButton.addEventListener(
+      "click",
+      exportCsv
+    );
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener(
+      "input",
+      renderStudents
+    );
+  }
+
+  if (schoolFilter) {
+    schoolFilter.addEventListener(
+      "change",
+      renderStudents
+    );
+  }
+
+  if (studentList) {
+    studentList.addEventListener(
+      "click",
+      handleStudentButtonClick
+    );
+  }
+
+  if (expandAllButton) {
+    expandAllButton.addEventListener(
+      "click",
+      expandAllStudents
+    );
+  }
+
+  if (collapseAllButton) {
+    collapseAllButton.addEventListener(
+      "click",
+      collapseAllStudents
+    );
+  }
 
   document
     .querySelectorAll("[data-close]")
@@ -98,35 +177,41 @@ function attachEvents() {
       });
     });
 
-  document.querySelectorAll(".modal").forEach(modal => {
-    modal.addEventListener("click", event => {
-      if (event.target === modal) {
-        closeModal(modal.id);
-      }
+  document
+    .querySelectorAll(".modal")
+    .forEach(modal => {
+      modal.addEventListener("click", event => {
+        if (event.target === modal) {
+          closeModal(modal.id);
+        }
+      });
     });
-  });
 
   document.addEventListener("keydown", event => {
     if (event.key === "Escape") {
-      document.querySelectorAll(".modal:not(.hidden)").forEach(modal => {
-        closeModal(modal.id);
-      });
+      document
+        .querySelectorAll(".modal:not(.hidden)")
+        .forEach(modal => {
+          closeModal(modal.id);
+        });
     }
   });
 }
 
 
 // ======================================================
-// DYNAMIC STUDENT BUTTON HANDLER
+// DYNAMIC BUTTON HANDLER
 // ======================================================
 
 function handleStudentButtonClick(event) {
   const button =
-    event.target.closest("button[data-action]");
+    event.target.closest("[data-action]");
 
   if (!button) {
     return;
   }
+
+  event.stopPropagation();
 
   const action =
     button.dataset.action;
@@ -153,12 +238,16 @@ function handleStudentButtonClick(event) {
     case "delete-session":
       deleteServiceSession(sessionId);
       break;
+
+    case "toggle-student":
+      toggleStudentDetails(studentId);
+      break;
   }
 }
 
 
 // ======================================================
-// LOAD CURRENT USER PROFILE
+// LOAD CURRENT PROFILE
 // ======================================================
 
 async function loadCurrentProfile() {
@@ -172,7 +261,10 @@ async function loadCurrentProfile() {
     .maybeSingle();
 
   if (error) {
-    console.error("Profile error:", error);
+    console.error(
+      "Profile load error:",
+      error
+    );
 
     alert(
       "Login worked, but your profile could not be loaded.\n\n" +
@@ -214,18 +306,32 @@ function displayCurrentUser() {
   const completedLabel =
     document.getElementById("completedLabel");
 
-  welcomeMessage.textContent =
-    `${currentProfile.full_name || currentUser.email} • ${capitalize(currentProfile.role)}`;
 
-  completedLabel.textContent =
-    currentProfile.role === "administrator"
-      ? "Completed Hours"
-      : "My Hours";
+  if (welcomeMessage) {
+    welcomeMessage.textContent =
+      `${currentProfile.full_name || currentUser.email} • ${capitalize(currentProfile.role)}`;
+  }
 
-  if (currentProfile.role === "administrator") {
-    addStudentButton.classList.remove("hidden");
-  } else {
-    addStudentButton.classList.add("hidden");
+  if (completedLabel) {
+    completedLabel.textContent =
+      currentProfile.role === "administrator"
+        ? "Completed Hours"
+        : "My Hours";
+  }
+
+  if (addStudentButton) {
+    if (
+      currentProfile.role ===
+      "administrator"
+    ) {
+      addStudentButton.classList.remove(
+        "hidden"
+      );
+    } else {
+      addStudentButton.classList.add(
+        "hidden"
+      );
+    }
   }
 }
 
@@ -238,8 +344,10 @@ async function logout() {
   const logoutButton =
     document.getElementById("logoutButton");
 
-  logoutButton.disabled = true;
-  logoutButton.textContent = "Logging out...";
+  if (logoutButton) {
+    logoutButton.disabled = true;
+    logoutButton.textContent = "Logging out...";
+  }
 
   const { error } =
     await supabaseClient.auth.signOut();
@@ -247,8 +355,10 @@ async function logout() {
   if (error) {
     console.error("Logout error:", error);
 
-    logoutButton.disabled = false;
-    logoutButton.textContent = "Logout";
+    if (logoutButton) {
+      logoutButton.disabled = false;
+      logoutButton.textContent = "Logout";
+    }
 
     showMessage(
       document.getElementById("appMessage"),
@@ -315,12 +425,18 @@ async function loadDashboard() {
         ascending: false
       });
 
+  const totalsRequest =
+    supabaseClient
+      .rpc("get_student_hour_totals");
+
   const [
     studentResult,
-    serviceResult
+    serviceResult,
+    totalsResult
   ] = await Promise.all([
     studentRequest,
-    serviceRequest
+    serviceRequest,
+    totalsRequest
   ]);
 
   if (studentResult.error) {
@@ -353,11 +469,29 @@ async function loadDashboard() {
     return;
   }
 
+  if (totalsResult.error) {
+    console.error(
+      "Student totals error:",
+      totalsResult.error
+    );
+
+    showMessage(
+      appMessage,
+      totalsResult.error.message,
+      "error"
+    );
+
+    return;
+  }
+
   students =
     studentResult.data || [];
 
   serviceSessions =
     serviceResult.data || [];
+
+  studentHourTotals =
+    totalsResult.data || [];
 
   buildSchoolFilter();
   renderStudents();
@@ -373,17 +507,29 @@ function renderStudents() {
   const studentList =
     document.getElementById("studentList");
 
+  const expandAllButton =
+    document.getElementById("expandAllButton");
+
+  const collapseAllButton =
+    document.getElementById("collapseAllButton");
+
+  const searchInput =
+    document.getElementById("searchInput");
+
+  const schoolFilter =
+    document.getElementById("schoolFilter");
+
   const searchText =
-    document
-      .getElementById("searchInput")
-      .value
-      .trim()
-      .toLowerCase();
+    searchInput
+      ? searchInput.value
+          .trim()
+          .toLowerCase()
+      : "";
 
   const selectedSchool =
-    document
-      .getElementById("schoolFilter")
-      .value;
+    schoolFilter
+      ? schoolFilter.value
+      : "";
 
   const filteredStudents =
     students.filter(student => {
@@ -411,7 +557,10 @@ function renderStudents() {
         !selectedSchool ||
         student.school === selectedSchool;
 
-      return matchesSearch && matchesSchool;
+      return (
+        matchesSearch &&
+        matchesSchool
+      );
     });
 
   if (!filteredStudents.length) {
@@ -440,38 +589,57 @@ function renderStudents() {
 // ======================================================
 
 function buildStudentCard(student) {
-  const allStudentSessions =
+  const allVisibleStudentSessions =
     serviceSessions.filter(
       session =>
-        sameId(session.student_id, student.id)
+        sameId(
+          session.student_id,
+          student.id
+        )
+    );
+
+  const providerSessions =
+    allVisibleStudentSessions.filter(
+      session =>
+        sameId(
+          session.provider_id,
+          currentUser.id
+        )
     );
 
   const visibleSessions =
-    currentProfile.role === "administrator"
-      ? allStudentSessions
-      : allStudentSessions.filter(
-          session =>
-            session.provider_id === currentUser.id
-        );
+    currentProfile.role ===
+    "administrator"
+      ? allVisibleStudentSessions
+      : providerSessions;
+
+  const studentTotals =
+    getStudentHourTotal(
+      student.id
+    );
 
   const totalCompleted =
-    sumHours(allStudentSessions);
+    studentTotals.completedHours;
 
   const providerCompleted =
     sumHours(
-      allStudentSessions.filter(
-        session =>
-          session.provider_id === currentUser.id
-      )
+      providerSessions
     );
 
   const assignedHours =
-    Number(student.comp_hours || 0);
+    Number(
+      student.comp_hours || 0
+    );
 
   const hoursLeft =
-    Math.max(
-      0,
-      assignedHours - totalCompleted
+    studentTotals.hoursLeft;
+
+  const studentKey =
+    String(student.id);
+
+  const isExpanded =
+    expandedStudentIds.has(
+      studentKey
     );
 
   const serviceRows =
@@ -493,7 +661,8 @@ function buildStudentCard(student) {
         `;
 
   const adminButtons =
-    currentProfile.role === "administrator"
+    currentProfile.role ===
+    "administrator"
       ? `
           <button
             class="secondary-button small-button"
@@ -516,37 +685,72 @@ function buildStudentCard(student) {
       : "";
 
   const completedLabel =
-    currentProfile.role === "administrator"
+    currentProfile.role ===
+    "administrator"
       ? "Completed Hours"
       : "My Hours";
 
   const completedValue =
-    currentProfile.role === "administrator"
+    currentProfile.role ===
+    "administrator"
       ? totalCompleted
       : providerCompleted;
 
+  const sessionCount =
+    visibleSessions.length;
+
+  const sessionLabel =
+    sessionCount === 1
+      ? "1 Session"
+      : `${sessionCount} Sessions`;
+
   return `
-    <article class="student-card">
+    <article
+      class="student-card ${isExpanded ? "expanded" : "collapsed"}"
+      data-student-card-id="${student.id}"
+    >
 
-      <div class="student-header">
+      <div
+        class="student-header student-toggle-area"
+        data-action="toggle-student"
+        data-student-id="${student.id}"
+        role="button"
+        tabindex="0"
+        aria-expanded="${isExpanded}"
+      >
 
-        <div class="student-main">
-          <h2>
-            ${escapeHtml(student.last_name)},
-            ${escapeHtml(student.first_name)}
-          </h2>
+        <div class="student-main student-title-block">
 
-          <p>
-            ID:
-            ${escapeHtml(student.student_id)}
-            •
-            ${escapeHtml(student.school)}
-            • Grade
-            ${escapeHtml(student.grade)}
-          </p>
+          <div class="student-name-row">
+            <span
+              class="expand-arrow"
+              aria-hidden="true"
+            >
+              ${isExpanded ? "▼" : "▶"}
+            </span>
+
+            <div>
+              <h2>
+                ${escapeHtml(student.last_name)},
+                ${escapeHtml(student.first_name)}
+              </h2>
+
+              <p>
+                ID:
+                ${escapeHtml(student.student_id)}
+                •
+                ${escapeHtml(student.school)}
+                • Grade
+                ${escapeHtml(student.grade)}
+              </p>
+            </div>
+          </div>
+
         </div>
 
+
         <div>
+
           <span class="metric-label">
             Comp Hours
           </span>
@@ -554,9 +758,12 @@ function buildStudentCard(student) {
           <span class="metric-value">
             ${assignedHours.toFixed(2)}
           </span>
+
         </div>
 
+
         <div>
+
           <span class="metric-label">
             ${completedLabel}
           </span>
@@ -564,9 +771,12 @@ function buildStudentCard(student) {
           <span class="metric-value">
             ${completedValue.toFixed(2)}
           </span>
+
         </div>
 
+
         <div>
+
           <span class="metric-label">
             Comp Hours Left
           </span>
@@ -574,9 +784,15 @@ function buildStudentCard(student) {
           <span class="metric-value remaining">
             ${hoursLeft.toFixed(2)}
           </span>
+
         </div>
 
+
         <div class="student-actions">
+
+          <span class="session-badge">
+            ${sessionLabel}
+          </span>
 
           <button
             class="primary-button small-button"
@@ -593,27 +809,37 @@ function buildStudentCard(student) {
 
       </div>
 
-      <div class="table-wrap">
 
-        <table class="service-table">
+      <div
+        class="student-details ${isExpanded ? "" : "hidden"}"
+      >
 
-          <thead>
-            <tr>
-              <th>Provider</th>
-              <th>Date</th>
-              <th>Start Time</th>
-              <th>End Time</th>
-              <th>Hours</th>
-              <th>Notes</th>
-              <th>Action</th>
-            </tr>
-          </thead>
+        <div class="table-wrap">
 
-          <tbody>
-            ${serviceRows}
-          </tbody>
+          <table class="service-table">
 
-        </table>
+            <thead>
+
+              <tr>
+                <th>Provider</th>
+                <th>Date</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Hours</th>
+                <th>Notes</th>
+                <th>Action</th>
+              </tr>
+
+            </thead>
+
+
+            <tbody>
+              ${serviceRows}
+            </tbody>
+
+          </table>
+
+        </div>
 
       </div>
 
@@ -632,8 +858,13 @@ function buildServiceRow(session) {
     "Provider";
 
   const canDelete =
-    currentProfile.role === "administrator" ||
-    session.provider_id === currentUser.id;
+    currentProfile.role ===
+    "administrator"
+    ||
+    sameId(
+      session.provider_id,
+      currentUser.id
+    );
 
   const deleteButton =
     canDelete
@@ -651,6 +882,7 @@ function buildServiceRow(session) {
 
   return `
     <tr>
+
       <td>
         ${escapeHtml(providerName)}
       </td>
@@ -678,6 +910,7 @@ function buildServiceRow(session) {
       <td>
         ${deleteButton}
       </td>
+
     </tr>
   `;
 }
@@ -692,51 +925,68 @@ function renderSummary() {
     students.reduce(
       (sum, student) =>
         sum +
-        Number(student.comp_hours || 0),
+        Number(
+          student.comp_hours || 0
+        ),
       0
     );
 
   const totalCompleted =
-    sumHours(serviceSessions);
+    studentHourTotals.reduce(
+      (sum, item) =>
+        sum +
+        Number(
+          item.completed_hours || 0
+        ),
+      0
+    );
 
   const providerCompleted =
     sumHours(
       serviceSessions.filter(
         session =>
-          session.provider_id === currentUser.id
+          sameId(
+            session.provider_id,
+            currentUser.id
+          )
       )
     );
 
   const displayedCompleted =
-    currentProfile.role === "administrator"
+    currentProfile.role ===
+    "administrator"
       ? totalCompleted
       : providerCompleted;
 
   const totalRemaining =
-    Math.max(
-      0,
-      totalAssigned - totalCompleted
+    studentHourTotals.reduce(
+      (sum, item) =>
+        sum +
+        Number(
+          item.hours_left || 0
+        ),
+      0
     );
 
-  document
-    .getElementById("studentCount")
-    .textContent =
-      students.length;
+  setText(
+    "studentCount",
+    students.length
+  );
 
-  document
-    .getElementById("assignedHours")
-    .textContent =
-      totalAssigned.toFixed(2);
+  setText(
+    "assignedHours",
+    totalAssigned.toFixed(2)
+  );
 
-  document
-    .getElementById("completedHours")
-    .textContent =
-      displayedCompleted.toFixed(2);
+  setText(
+    "completedHours",
+    displayedCompleted.toFixed(2)
+  );
 
-  document
-    .getElementById("remainingHours")
-    .textContent =
-      totalRemaining.toFixed(2);
+  setText(
+    "remainingHours",
+    totalRemaining.toFixed(2)
+  );
 }
 
 
@@ -746,7 +996,13 @@ function renderSummary() {
 
 function buildSchoolFilter() {
   const schoolFilter =
-    document.getElementById("schoolFilter");
+    document.getElementById(
+      "schoolFilter"
+    );
+
+  if (!schoolFilter) {
+    return;
+  }
 
   const currentValue =
     schoolFilter.value;
@@ -754,7 +1010,9 @@ function buildSchoolFilter() {
   const schools = [
     ...new Set(
       students
-        .map(student => student.school)
+        .map(student =>
+          student.school
+        )
         .filter(Boolean)
     )
   ].sort();
@@ -769,8 +1027,13 @@ function buildSchoolFilter() {
       `)
       .join("");
 
-  if (schools.includes(currentValue)) {
-    schoolFilter.value = currentValue;
+  if (
+    schools.includes(
+      currentValue
+    )
+  ) {
+    schoolFilter.value =
+      currentValue;
   }
 }
 
@@ -787,44 +1050,55 @@ function openAddStudentModal() {
     return;
   }
 
-  document
-    .getElementById("studentModalTitle")
-    .textContent =
-      "Add Student";
-
-  document
-    .getElementById("studentRecordId")
-    .value = "";
-
-  document
-    .getElementById("studentId")
-    .value = "";
-
-  document
-    .getElementById("firstName")
-    .value = "";
-
-  document
-    .getElementById("lastName")
-    .value = "";
-
-  document
-    .getElementById("school")
-    .value = "";
-
-  document
-    .getElementById("grade")
-    .value = "";
-
-  document
-    .getElementById("compHours")
-    .value = "";
-
-  clearMessage(
-    document.getElementById("studentMessage")
+  setText(
+    "studentModalTitle",
+    "Add Student"
   );
 
-  openModal("studentModal");
+  setValue(
+    "studentRecordId",
+    ""
+  );
+
+  setValue(
+    "studentId",
+    ""
+  );
+
+  setValue(
+    "firstName",
+    ""
+  );
+
+  setValue(
+    "lastName",
+    ""
+  );
+
+  setValue(
+    "school",
+    ""
+  );
+
+  setValue(
+    "grade",
+    ""
+  );
+
+  setValue(
+    "compHours",
+    ""
+  );
+
+  clearMessage(
+    document.getElementById(
+      "studentMessage"
+    )
+  );
+
+  openModal(
+    "studentModal"
+  );
 }
 
 
@@ -832,7 +1106,9 @@ function openAddStudentModal() {
 // EDIT STUDENT MODAL
 // ======================================================
 
-function openEditStudentModal(studentId) {
+function openEditStudentModal(
+  studentId
+) {
   if (
     currentProfile.role !==
     "administrator"
@@ -841,60 +1117,71 @@ function openEditStudentModal(studentId) {
   }
 
   const student =
-  students.find(
-    item => sameId(item.id, studentId)
-  );
+    students.find(
+      item =>
+        sameId(
+          item.id,
+          studentId
+        )
+    );
 
   if (!student) {
-    alert("Student record not found.");
+    alert(
+      "Student record not found."
+    );
+
     return;
   }
 
-  document
-    .getElementById("studentModalTitle")
-    .textContent =
-      "Edit Student";
-
-  document
-    .getElementById("studentRecordId")
-    .value =
-      student.id;
-
-  document
-    .getElementById("studentId")
-    .value =
-      student.student_id;
-
-  document
-    .getElementById("firstName")
-    .value =
-      student.first_name;
-
-  document
-    .getElementById("lastName")
-    .value =
-      student.last_name;
-
-  document
-    .getElementById("school")
-    .value =
-      student.school;
-
-  document
-    .getElementById("grade")
-    .value =
-      student.grade;
-
-  document
-    .getElementById("compHours")
-    .value =
-      student.comp_hours;
-
-  clearMessage(
-    document.getElementById("studentMessage")
+  setText(
+    "studentModalTitle",
+    "Edit Student"
   );
 
-  openModal("studentModal");
+  setValue(
+    "studentRecordId",
+    student.id
+  );
+
+  setValue(
+    "studentId",
+    student.student_id
+  );
+
+  setValue(
+    "firstName",
+    student.first_name
+  );
+
+  setValue(
+    "lastName",
+    student.last_name
+  );
+
+  setValue(
+    "school",
+    student.school
+  );
+
+  setValue(
+    "grade",
+    student.grade
+  );
+
+  setValue(
+    "compHours",
+    student.comp_hours
+  );
+
+  clearMessage(
+    document.getElementById(
+      "studentMessage"
+    )
+  );
+
+  openModal(
+    "studentModal"
+  );
 }
 
 
@@ -904,9 +1191,13 @@ function openEditStudentModal(studentId) {
 
 async function saveStudent() {
   const studentMessage =
-    document.getElementById("studentMessage");
+    document.getElementById(
+      "studentMessage"
+    );
 
-  clearMessage(studentMessage);
+  clearMessage(
+    studentMessage
+  );
 
   if (
     currentProfile.role !==
@@ -922,46 +1213,41 @@ async function saveStudent() {
   }
 
   const recordId =
-    document
-      .getElementById("studentRecordId")
-      .value;
+    getValue(
+      "studentRecordId"
+    );
 
   const studentData = {
     student_id:
-      document
-        .getElementById("studentId")
-        .value
-        .trim(),
+      getValue(
+        "studentId"
+      ).trim(),
 
     first_name:
-      document
-        .getElementById("firstName")
-        .value
-        .trim(),
+      getValue(
+        "firstName"
+      ).trim(),
 
     last_name:
-      document
-        .getElementById("lastName")
-        .value
-        .trim(),
+      getValue(
+        "lastName"
+      ).trim(),
 
     school:
-      document
-        .getElementById("school")
-        .value
-        .trim(),
+      getValue(
+        "school"
+      ).trim(),
 
     grade:
-      document
-        .getElementById("grade")
-        .value
-        .trim(),
+      getValue(
+        "grade"
+      ).trim(),
 
     comp_hours:
       Number(
-        document
-          .getElementById("compHours")
-          .value
+        getValue(
+          "compHours"
+        )
       ),
 
     active:
@@ -969,12 +1255,20 @@ async function saveStudent() {
   };
 
   if (
-    !studentData.student_id ||
-    !studentData.first_name ||
-    !studentData.last_name ||
-    !studentData.school ||
-    !studentData.grade ||
-    Number.isNaN(studentData.comp_hours) ||
+    !studentData.student_id
+    ||
+    !studentData.first_name
+    ||
+    !studentData.last_name
+    ||
+    !studentData.school
+    ||
+    !studentData.grade
+    ||
+    Number.isNaN(
+      studentData.comp_hours
+    )
+    ||
     studentData.comp_hours < 0
   ) {
     showMessage(
@@ -999,7 +1293,10 @@ async function saveStudent() {
       await supabaseClient
         .from("students")
         .update(studentData)
-        .eq("id", recordId);
+        .eq(
+          "id",
+          recordId
+        );
   } else {
     studentData.created_by =
       currentUser.id;
@@ -1031,7 +1328,9 @@ async function saveStudent() {
     return;
   }
 
-  closeModal("studentModal");
+  closeModal(
+    "studentModal"
+  );
 
   await loadDashboard();
 }
@@ -1041,48 +1340,73 @@ async function saveStudent() {
 // OPEN SERVICE MODAL
 // ======================================================
 
-function openServiceModal(studentId) {
-  const student = students.find(
-    item => sameId(item.id, studentId)
-  );
+function openServiceModal(
+  studentId
+) {
+  const student =
+    students.find(
+      item =>
+        sameId(
+          item.id,
+          studentId
+        )
+    );
 
   if (!student) {
-    console.error("Student not found:", studentId, students);
-    alert("Student record not found.");
+    console.error(
+      "Student not found:",
+      studentId,
+      students
+    );
+
+    alert(
+      "Student record not found."
+    );
+
     return;
   }
 
-  document
-    .getElementById("serviceStudentId")
-    .value = student.id;
-
-  document
-    .getElementById("serviceStudentName")
-    .textContent =
-      `${student.last_name}, ${student.first_name} • ${student.student_id}`;
-
-  document
-    .getElementById("serviceDate")
-    .value = getTodayDate();
-
-  document
-    .getElementById("startTime")
-    .value = "";
-
-  document
-    .getElementById("endTime")
-    .value = "";
-
-  document
-    .getElementById("serviceNotes")
-    .value = "";
-
-  clearMessage(
-    document.getElementById("serviceMessage")
+  setValue(
+    "serviceStudentId",
+    student.id
   );
 
-  openModal("serviceModal");
+  setText(
+    "serviceStudentName",
+    `${student.last_name}, ${student.first_name} • ${student.student_id}`
+  );
+
+  setValue(
+    "serviceDate",
+    getTodayDate()
+  );
+
+  setValue(
+    "startTime",
+    ""
+  );
+
+  setValue(
+    "endTime",
+    ""
+  );
+
+  setValue(
+    "serviceNotes",
+    ""
+  );
+
+  clearMessage(
+    document.getElementById(
+      "serviceMessage"
+    )
+  );
+
+  openModal(
+    "serviceModal"
+  );
 }
+
 
 // ======================================================
 // SAVE SERVICE SESSION
@@ -1090,40 +1414,46 @@ function openServiceModal(studentId) {
 
 async function saveServiceSession() {
   const serviceMessage =
-    document.getElementById("serviceMessage");
+    document.getElementById(
+      "serviceMessage"
+    );
 
-  clearMessage(serviceMessage);
+  clearMessage(
+    serviceMessage
+  );
 
   const studentId =
-    document
-      .getElementById("serviceStudentId")
-      .value;
+    getValue(
+      "serviceStudentId"
+    );
 
   const serviceDate =
-    document
-      .getElementById("serviceDate")
-      .value;
+    getValue(
+      "serviceDate"
+    );
 
   const startTime =
-    document
-      .getElementById("startTime")
-      .value;
+    getValue(
+      "startTime"
+    );
 
   const endTime =
-    document
-      .getElementById("endTime")
-      .value;
+    getValue(
+      "endTime"
+    );
 
   const notes =
-    document
-      .getElementById("serviceNotes")
-      .value
-      .trim();
+    getValue(
+      "serviceNotes"
+    ).trim();
 
   if (
-    !studentId ||
-    !serviceDate ||
-    !startTime ||
+    !studentId
+    ||
+    !serviceDate
+    ||
+    !startTime
+    ||
     !endTime
   ) {
     showMessage(
@@ -1141,7 +1471,9 @@ async function saveServiceSession() {
       endTime
     );
 
-  if (calculatedHours <= 0) {
+  if (
+    calculatedHours <= 0
+  ) {
     showMessage(
       serviceMessage,
       "End time must be after start time.",
@@ -1153,7 +1485,11 @@ async function saveServiceSession() {
 
   const student =
     students.find(
-      item => sameId(item.id, studentId)
+      item =>
+        sameId(
+          item.id,
+          studentId
+        )
     );
 
   if (!student) {
@@ -1166,17 +1502,13 @@ async function saveServiceSession() {
     return;
   }
 
-  const completedHours =
-    sumHours(
-      serviceSessions.filter(
-        session =>
-          sameId(session.student_id, studentId)
-      )
+  const studentTotals =
+    getStudentHourTotal(
+      studentId
     );
 
   const hoursLeft =
-    Number(student.comp_hours || 0) -
-    completedHours;
+    studentTotals.hoursLeft;
 
   if (
     calculatedHours >
@@ -1202,7 +1534,7 @@ async function saveServiceSession() {
       .from("service_sessions")
       .insert({
         student_id:
-          studentId,
+          student.id,
 
         provider_id:
           currentUser.id,
@@ -1244,7 +1576,16 @@ async function saveServiceSession() {
     return;
   }
 
-  closeModal("serviceModal");
+  lastOpenedStudentId =
+    String(student.id);
+
+  expandedStudentIds.add(
+    String(student.id)
+  );
+
+  closeModal(
+    "serviceModal"
+  );
 
   await loadDashboard();
 }
@@ -1254,20 +1595,34 @@ async function saveServiceSession() {
 // DELETE SERVICE SESSION
 // ======================================================
 
-async function deleteServiceSession(sessionId) {
+async function deleteServiceSession(
+  sessionId
+) {
   const session =
-  serviceSessions.find(
-    item => sameId(item.id, sessionId)
-  );
+    serviceSessions.find(
+      item =>
+        sameId(
+          item.id,
+          sessionId
+        )
+    );
 
   if (!session) {
-    alert("Service session not found.");
+    alert(
+      "Service session not found."
+    );
+
     return;
   }
 
   const canDelete =
-    currentProfile.role === "administrator" ||
-    session.provider_id === currentUser.id;
+    currentProfile.role ===
+    "administrator"
+    ||
+    sameId(
+      session.provider_id,
+      currentUser.id
+    );
 
   if (!canDelete) {
     alert(
@@ -1290,7 +1645,10 @@ async function deleteServiceSession(sessionId) {
     await supabaseClient
       .from("service_sessions")
       .delete()
-      .eq("id", sessionId);
+      .eq(
+        "id",
+        sessionId
+      );
 
   if (error) {
     console.error(
@@ -1299,13 +1657,22 @@ async function deleteServiceSession(sessionId) {
     );
 
     showMessage(
-      document.getElementById("appMessage"),
+      document.getElementById(
+        "appMessage"
+      ),
       error.message,
       "error"
     );
 
     return;
   }
+
+  lastOpenedStudentId =
+    String(session.student_id);
+
+  expandedStudentIds.add(
+    String(session.student_id)
+  );
 
   await loadDashboard();
 }
@@ -1315,7 +1682,9 @@ async function deleteServiceSession(sessionId) {
 // REMOVE / DEACTIVATE STUDENT
 // ======================================================
 
-async function deactivateStudent(studentId) {
+async function deactivateStudent(
+  studentId
+) {
   if (
     currentProfile.role !==
     "administrator"
@@ -1325,11 +1694,18 @@ async function deactivateStudent(studentId) {
 
   const student =
     students.find(
-      item => sameId(item.id, studentId)
+      item =>
+        sameId(
+          item.id,
+          studentId
+        )
     );
 
   if (!student) {
-    alert("Student record not found.");
+    alert(
+      "Student record not found."
+    );
+
     return;
   }
 
@@ -1346,9 +1722,13 @@ async function deactivateStudent(studentId) {
     await supabaseClient
       .from("students")
       .update({
-        active: false
+        active:
+          false
       })
-      .eq("id", studentId);
+      .eq(
+        "id",
+        student.id
+      );
 
   if (error) {
     console.error(
@@ -1357,7 +1737,9 @@ async function deactivateStudent(studentId) {
     );
 
     showMessage(
-      document.getElementById("appMessage"),
+      document.getElementById(
+        "appMessage"
+      ),
       error.message,
       "error"
     );
@@ -1393,37 +1775,49 @@ function exportCsv() {
   ];
 
   students.forEach(student => {
-    const allStudentSessions =
+    const studentSessions =
       serviceSessions.filter(
         session =>
-          sameId(session.student_id, student.id)
+          sameId(
+            session.student_id,
+            student.id
+          )
       );
 
     const visibleSessions =
-      currentProfile.role === "administrator"
-        ? allStudentSessions
-        : allStudentSessions.filter(
+      currentProfile.role ===
+      "administrator"
+        ? studentSessions
+        : studentSessions.filter(
             session =>
-              session.provider_id === currentUser.id
+              sameId(
+                session.provider_id,
+                currentUser.id
+              )
           );
 
-    const totalCompleted =
-      sumHours(allStudentSessions);
-
-    const hoursLeft =
-      Math.max(
-        0,
-        Number(student.comp_hours || 0) -
-        totalCompleted
+    const studentTotals =
+      getStudentHourTotal(
+        student.id
       );
 
-    if (!visibleSessions.length) {
+    const totalCompleted =
+      studentTotals.completedHours;
+
+    const hoursLeft =
+      studentTotals.hoursLeft;
+
+    if (
+      !visibleSessions.length
+    ) {
       rows.push([
         student.student_id,
         `${student.last_name}, ${student.first_name}`,
         student.school,
         student.grade,
-        Number(student.comp_hours || 0).toFixed(2),
+        Number(
+          student.comp_hours || 0
+        ).toFixed(2),
         totalCompleted.toFixed(2),
         hoursLeft.toFixed(2),
         "",
@@ -1437,30 +1831,44 @@ function exportCsv() {
       return;
     }
 
-    visibleSessions.forEach(session => {
-      rows.push([
-        student.student_id,
-        `${student.last_name}, ${student.first_name}`,
-        student.school,
-        student.grade,
-        Number(student.comp_hours || 0).toFixed(2),
-        totalCompleted.toFixed(2),
-        hoursLeft.toFixed(2),
-        session.provider?.full_name || "Provider",
-        formatDate(session.service_date),
-        formatTime(session.start_time),
-        formatTime(session.end_time),
-        Number(session.hours || 0).toFixed(2),
-        session.notes || ""
-      ]);
-    });
+    visibleSessions.forEach(
+      session => {
+        rows.push([
+          student.student_id,
+          `${student.last_name}, ${student.first_name}`,
+          student.school,
+          student.grade,
+          Number(
+            student.comp_hours || 0
+          ).toFixed(2),
+          totalCompleted.toFixed(2),
+          hoursLeft.toFixed(2),
+          session.provider?.full_name || "Provider",
+          formatDate(
+            session.service_date
+          ),
+          formatTime(
+            session.start_time
+          ),
+          formatTime(
+            session.end_time
+          ),
+          Number(
+            session.hours || 0
+          ).toFixed(2),
+          session.notes || ""
+        ]);
+      }
+    );
   });
 
   const csv =
     rows
       .map(row =>
         row
-          .map(value => csvEscape(value))
+          .map(value =>
+            csvEscape(value)
+          )
           .join(",")
       )
       .join("\n");
@@ -1469,28 +1877,112 @@ function exportCsv() {
     new Blob(
       [csv],
       {
-        type: "text/csv;charset=utf-8;"
+        type:
+          "text/csv;charset=utf-8;"
       }
     );
 
   const url =
-    URL.createObjectURL(blob);
+    URL.createObjectURL(
+      blob
+    );
 
   const link =
-    document.createElement("a");
+    document.createElement(
+      "a"
+    );
 
-  link.href = url;
+  link.href =
+    url;
 
   link.download =
     `sped_compensatory_services_${getTodayDate()}.csv`;
 
-  document.body.appendChild(link);
+  document.body.appendChild(
+    link
+  );
 
   link.click();
 
-  document.body.removeChild(link);
+  document.body.removeChild(
+    link
+  );
 
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(
+    url
+  );
+}
+
+
+// ======================================================
+// EXPAND / COLLAPSE STUDENT CARDS
+// ======================================================
+
+function toggleStudentDetails(
+  studentId
+) {
+  const key =
+    String(studentId);
+
+  if (
+    expandedStudentIds.has(key)
+  ) {
+    expandedStudentIds.delete(key);
+  } else {
+    expandedStudentIds.add(key);
+    lastOpenedStudentId = key;
+  }
+
+  renderStudents();
+}
+
+
+function expandAllStudents() {
+  students.forEach(student => {
+    expandedStudentIds.add(
+      String(student.id)
+    );
+  });
+
+  renderStudents();
+}
+
+
+function collapseAllStudents() {
+  expandedStudentIds.clear();
+  lastOpenedStudentId = null;
+
+  renderStudents();
+}
+
+
+// ======================================================
+// STUDENT TOTALS
+// ======================================================
+
+function getStudentHourTotal(
+  studentId
+) {
+  const total =
+    studentHourTotals.find(
+      item =>
+        sameId(
+          item.student_id,
+          studentId
+        )
+    );
+
+  return {
+    completedHours:
+      Number(
+        total?.completed_hours || 0
+      ),
+
+    hoursLeft:
+      Number(
+        total?.hours_left || 0
+      )
+  };
 }
 
 
@@ -1530,13 +2022,16 @@ function calculateHours(
     endMinutes -
     startMinutes;
 
-  if (difference <= 0) {
+  if (
+    difference <= 0
+  ) {
     return 0;
   }
 
   return (
     Math.round(
-      (difference / 60) * 100
+      (difference / 60) *
+      100
     ) / 100
   );
 }
@@ -1546,11 +2041,18 @@ function calculateHours(
 // SUM HOURS
 // ======================================================
 
-function sumHours(sessions) {
+function sumHours(
+  sessions
+) {
   return sessions.reduce(
-    (sum, session) =>
+    (
+      sum,
+      session
+    ) =>
       sum +
-      Number(session.hours || 0),
+      Number(
+        session.hours || 0
+      ),
     0
   );
 }
@@ -1560,7 +2062,9 @@ function sumHours(sessions) {
 // DATE AND TIME
 // ======================================================
 
-function formatDate(dateString) {
+function formatDate(
+  dateString
+) {
   if (!dateString) {
     return "";
   }
@@ -1572,11 +2076,15 @@ function formatDate(dateString) {
   ] =
     dateString.split("-");
 
-  return `${month}-${day}-${year}`;
+  return (
+    `${month}-${day}-${year}`
+  );
 }
 
 
-function formatTime(timeString) {
+function formatTime(
+  timeString
+) {
   if (!timeString) {
     return "";
   }
@@ -1598,7 +2106,9 @@ function formatTime(timeString) {
   hour =
     hour % 12 || 12;
 
-  return `${hour}:${minute} ${suffix}`;
+  return (
+    `${hour}:${minute} ${suffix}`
+  );
 }
 
 
@@ -1625,7 +2135,9 @@ function getTodayDate() {
       "0"
     );
 
-  return `${year}-${month}-${day}`;
+  return (
+    `${year}-${month}-${day}`
+  );
 }
 
 
@@ -1633,22 +2145,34 @@ function getTodayDate() {
 // MODALS
 // ======================================================
 
-function openModal(modalId) {
+function openModal(
+  modalId
+) {
   const modal =
-    document.getElementById(modalId);
+    document.getElementById(
+      modalId
+    );
 
   if (modal) {
-    modal.classList.remove("hidden");
+    modal.classList.remove(
+      "hidden"
+    );
   }
 }
 
 
-function closeModal(modalId) {
+function closeModal(
+  modalId
+) {
   const modal =
-    document.getElementById(modalId);
+    document.getElementById(
+      modalId
+    );
 
   if (modal) {
-    modal.classList.add("hidden");
+    modal.classList.add(
+      "hidden"
+    );
   }
 }
 
@@ -1663,7 +2187,9 @@ function setButtonBusy(
   text
 ) {
   const button =
-    document.getElementById(buttonId);
+    document.getElementById(
+      buttonId
+    );
 
   if (!button) {
     return;
@@ -1698,7 +2224,9 @@ function showMessage(
 }
 
 
-function clearMessage(element) {
+function clearMessage(
+  element
+) {
   if (!element) {
     return;
   }
@@ -1712,12 +2240,67 @@ function clearMessage(element) {
 
 
 // ======================================================
-// ID COMPARISON HELPER
-// Handles IDs returned as strings or numbers.
+// DOM HELPERS
 // ======================================================
 
-function sameId(value1, value2) {
-  return String(value1) === String(value2);
+function setText(
+  elementId,
+  value
+) {
+  const element =
+    document.getElementById(
+      elementId
+    );
+
+  if (element) {
+    element.textContent =
+      value;
+  }
+}
+
+
+function setValue(
+  elementId,
+  value
+) {
+  const element =
+    document.getElementById(
+      elementId
+    );
+
+  if (element) {
+    element.value =
+      value ?? "";
+  }
+}
+
+
+function getValue(
+  elementId
+) {
+  const element =
+    document.getElementById(
+      elementId
+    );
+
+  return element
+    ? element.value
+    : "";
+}
+
+
+// ======================================================
+// ID COMPARISON
+// ======================================================
+
+function sameId(
+  value1,
+  value2
+) {
+  return (
+    String(value1) ===
+    String(value2)
+  );
 }
 
 
@@ -1725,38 +2308,68 @@ function sameId(value1, value2) {
 // GENERAL HELPERS
 // ======================================================
 
-function capitalize(value) {
+function capitalize(
+  value
+) {
   const text =
     String(value || "");
 
   return (
-    text.charAt(0).toUpperCase() +
+    text
+      .charAt(0)
+      .toUpperCase()
+    +
     text.slice(1)
   );
 }
 
 
-function csvEscape(value) {
+function csvEscape(
+  value
+) {
   const text =
     String(value ?? "");
 
   if (
-    text.includes(",") ||
-    text.includes('"') ||
+    text.includes(",")
+    ||
+    text.includes('"')
+    ||
     text.includes("\n")
   ) {
-    return `"${text.replaceAll('"', '""')}"`;
+    return (
+      `"${text.replaceAll('"', '""')}"`
+    );
   }
 
   return text;
 }
 
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+function escapeHtml(
+  value
+) {
+  return String(
+    value ?? ""
+  )
+    .replaceAll(
+      "&",
+      "&amp;"
+    )
+    .replaceAll(
+      "<",
+      "&lt;"
+    )
+    .replaceAll(
+      ">",
+      "&gt;"
+    )
+    .replaceAll(
+      '"',
+      "&quot;"
+    )
+    .replaceAll(
+      "'",
+      "&#039;"
+    );
 }

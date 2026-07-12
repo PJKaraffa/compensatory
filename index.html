@@ -31,7 +31,11 @@
     <section class="toolbar">
       <input id="searchInput" type="search" placeholder="Search student ID, name, school, or grade">
       <select id="schoolFilter"><option value="">All Schools</option></select>
-      <button id="refreshButton" class="secondary-button" type="button">Refresh</button>
+      <div class="toolbar-buttons">
+        <button id="expandAllButton" class="secondary-button" type="button">Expand All</button>
+        <button id="collapseAllButton" class="secondary-button" type="button">Collapse All</button>
+        <button id="refreshButton" class="secondary-button" type="button">Refresh</button>
+      </div>
     </section>
 
     <section id="studentList" class="student-list"></section>
