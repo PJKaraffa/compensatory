@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SPED Compensatory Services Login</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="login-body">
+
+  <main class="login-wrapper">
+    <section class="login-card">
+      <div class="logo-circle">CS</div>
+
+      <h1>SPED Compensatory Services</h1>
+      <p>Administrator and Provider Login</p>
+
+      <label for="email">Email</label>
+      <input
+        id="email"
+        type="email"
+        placeholder="Enter your email"
+        autocomplete="username"
+      >
+
+      <label for="password">Password</label>
+      <input
+        id="password"
+        type="password"
+        placeholder="Enter your password"
+        autocomplete="current-password"
+      >
+
+      <button id="loginButton" type="button">Login</button>
+
+      <p id="loginMessage" class="message"></p>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="login.js"></script>
+</body>
+</html>
