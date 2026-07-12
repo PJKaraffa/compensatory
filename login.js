@@ -1,20 +1,13 @@
 document.addEventListener("DOMContentLoaded", initializeLogin);
 
 async function initializeLogin() {
-  const { data } = await supabaseClient.auth.getSession();
-
-  if (data.session) {
-    window.location.href = "index.html";
-    return;
-  }
-
   document.getElementById("loginButton").addEventListener("click", login);
-
   document.getElementById("password").addEventListener("keydown", event => {
-    if (event.key === "Enter") {
-      login();
-    }
+    if (event.key === "Enter") login();
   });
+
+  const { data, error } = await supabaseClient.auth.getSession();
+  if (!error && data.session) window.location.replace("index.html");
 }
 
 async function login() {
@@ -24,7 +17,6 @@ async function login() {
   const button = document.getElementById("loginButton");
 
   clearMessage(message);
-
   if (!email || !password) {
     showMessage(message, "Enter your email and password.", "error");
     return;
@@ -33,10 +25,7 @@ async function login() {
   button.disabled = true;
   button.textContent = "Logging in...";
 
-  const { data, error } = await supabaseClient.auth.signInWithPassword({
-    email,
-    password
-  });
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
   button.disabled = false;
   button.textContent = "Login";
@@ -46,9 +35,12 @@ async function login() {
     return;
   }
 
-  if (data.session) {
-    window.location.href = "index.html";
+  if (!data.session) {
+    showMessage(message, "Login succeeded, but no session was created.", "error");
+    return;
   }
+
+  window.location.replace("index.html");
 }
 
 function showMessage(element, text, type) {

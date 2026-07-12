@@ -1,4 +1,4 @@
-SPED COMPENSATORY SERVICES - SEPARATE FILE VERSION
+SPED COMPENSATORY SERVICES - CLEAN REBUILD
 
 FILES
 login.html
@@ -9,23 +9,22 @@ app.js
 supabase-config.js
 setup.sql
 
-GITHUB PAGES
-Set login.html as the page users open first.
+IMPORTANT
+setup.sql drops and recreates profiles, students, and service_sessions.
+Use it only when ready to replace the current application tables.
 
-Example:
-https://yourusername.github.io/your-project/login.html
-
-SUPABASE SETUP
-1. Run setup.sql.
-2. Create users in Supabase Authentication.
-3. Insert each user into public.profiles.
-4. Use role administrator or provider.
-5. Add your Supabase URL and anon key to supabase-config.js.
+SETUP
+1. Create users in Supabase Authentication.
+2. Run setup.sql.
+3. Insert each user into public.profiles using the Authentication UUID.
+4. Add the Supabase URL and anon public key to supabase-config.js.
+5. Upload all web files to GitHub Pages.
+6. Open login.html.
 
 ADMIN EXAMPLE
 insert into public.profiles (id, full_name, role)
-values ('USER-UUID', 'PJ Karaffa', 'administrator');
+values ('AUTH-USER-UUID', 'PJ Karaffa', 'administrator');
 
 PROVIDER EXAMPLE
 insert into public.profiles (id, full_name, role)
-values ('USER-UUID', 'Provider Name', 'provider');
+values ('AUTH-USER-UUID', 'Provider Name', 'provider');
