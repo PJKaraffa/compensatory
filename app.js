@@ -825,9 +825,9 @@ function openEditStudentModal(studentId) {
   }
 
   const student =
-    students.find(
-      item => item.id === studentId
-    );
+  students.find(
+    item => String(item.id) === String(studentId)
+  );
 
   if (!student) {
     alert("Student record not found.");
@@ -1026,20 +1026,19 @@ async function saveStudent() {
 // ======================================================
 
 function openServiceModal(studentId) {
-  const student =
-    students.find(
-      item => item.id === studentId
-    );
+  const student = students.find(
+    item => String(item.id) === String(studentId)
+  );
 
   if (!student) {
+    console.error("Student not found:", studentId, students);
     alert("Student record not found.");
     return;
   }
 
   document
     .getElementById("serviceStudentId")
-    .value =
-      student.id;
+    .value = student.id;
 
   document
     .getElementById("serviceStudentName")
@@ -1048,8 +1047,7 @@ function openServiceModal(studentId) {
 
   document
     .getElementById("serviceDate")
-    .value =
-      getTodayDate();
+    .value = getTodayDate();
 
   document
     .getElementById("startTime")
@@ -1069,7 +1067,6 @@ function openServiceModal(studentId) {
 
   openModal("serviceModal");
 }
-
 
 // ======================================================
 // SAVE SERVICE SESSION
@@ -1243,9 +1240,9 @@ async function saveServiceSession() {
 
 async function deleteServiceSession(sessionId) {
   const session =
-    serviceSessions.find(
-      item => item.id === sessionId
-    );
+  serviceSessions.find(
+    item => String(item.id) === String(sessionId)
+  );
 
   if (!session) {
     alert("Service session not found.");
