@@ -6,8 +6,8 @@ async function initializeLogin() {
     if (event.key === "Enter") login();
   });
 
-  const { data, error } = await supabaseClient.auth.getSession();
-  if (!error && data.session) window.location.replace("index.html");
+  const { data } = await supabaseClient.auth.getSession();
+  if (data.session) window.location.replace("index.html");
 }
 
 async function login() {
@@ -17,6 +17,7 @@ async function login() {
   const button = document.getElementById("loginButton");
 
   clearMessage(message);
+
   if (!email || !password) {
     showMessage(message, "Enter your email and password.", "error");
     return;
@@ -35,12 +36,7 @@ async function login() {
     return;
   }
 
-  if (!data.session) {
-    showMessage(message, "Login succeeded, but no session was created.", "error");
-    return;
-  }
-
-  window.location.replace("index.html");
+  if (data.session) window.location.replace("index.html");
 }
 
 function showMessage(element, text, type) {

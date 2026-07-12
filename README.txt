@@ -1,4 +1,6 @@
-SPED COMPENSATORY SERVICES - CLEAN REBUILD
+SPED COMPENSATORY SERVICES VERSION 2
+
+The visual appearance is intentionally unchanged.
 
 FILES
 login.html
@@ -10,21 +12,9 @@ supabase-config.js
 setup.sql
 
 IMPORTANT
-setup.sql drops and recreates profiles, students, and service_sessions.
-Use it only when ready to replace the current application tables.
+1. Put your Supabase URL and anon key into supabase-config.js.
+2. Upload all web files to the same GitHub Pages folder.
+3. Open login.html.
+4. Use Ctrl+F5 after replacing app.js.
 
-SETUP
-1. Create users in Supabase Authentication.
-2. Run setup.sql.
-3. Insert each user into public.profiles using the Authentication UUID.
-4. Add the Supabase URL and anon public key to supabase-config.js.
-5. Upload all web files to GitHub Pages.
-6. Open login.html.
-
-ADMIN EXAMPLE
-insert into public.profiles (id, full_name, role)
-values ('AUTH-USER-UUID', 'PJ Karaffa', 'administrator');
-
-PROVIDER EXAMPLE
-insert into public.profiles (id, full_name, role)
-values ('AUTH-USER-UUID', 'Provider Name', 'provider');
+The updated JavaScript supports bigint IDs returned as either numbers or strings.

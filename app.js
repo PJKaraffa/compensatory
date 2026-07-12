@@ -97,6 +97,22 @@ function attachEvents() {
         closeModal(button.dataset.close);
       });
     });
+
+  document.querySelectorAll(".modal").forEach(modal => {
+    modal.addEventListener("click", event => {
+      if (event.target === modal) {
+        closeModal(modal.id);
+      }
+    });
+  });
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+      document.querySelectorAll(".modal:not(.hidden)").forEach(modal => {
+        closeModal(modal.id);
+      });
+    }
+  });
 }
 
 
@@ -427,7 +443,7 @@ function buildStudentCard(student) {
   const allStudentSessions =
     serviceSessions.filter(
       session =>
-        session.student_id === student.id
+        sameId(session.student_id, student.id)
     );
 
   const visibleSessions =
@@ -826,7 +842,7 @@ function openEditStudentModal(studentId) {
 
   const student =
   students.find(
-    item => String(item.id) === String(studentId)
+    item => sameId(item.id, studentId)
   );
 
   if (!student) {
@@ -1027,7 +1043,7 @@ async function saveStudent() {
 
 function openServiceModal(studentId) {
   const student = students.find(
-    item => String(item.id) === String(studentId)
+    item => sameId(item.id, studentId)
   );
 
   if (!student) {
@@ -1137,7 +1153,7 @@ async function saveServiceSession() {
 
   const student =
     students.find(
-      item => item.id === studentId
+      item => sameId(item.id, studentId)
     );
 
   if (!student) {
@@ -1154,7 +1170,7 @@ async function saveServiceSession() {
     sumHours(
       serviceSessions.filter(
         session =>
-          session.student_id === studentId
+          sameId(session.student_id, studentId)
       )
     );
 
@@ -1241,7 +1257,7 @@ async function saveServiceSession() {
 async function deleteServiceSession(sessionId) {
   const session =
   serviceSessions.find(
-    item => String(item.id) === String(sessionId)
+    item => sameId(item.id, sessionId)
   );
 
   if (!session) {
@@ -1309,7 +1325,7 @@ async function deactivateStudent(studentId) {
 
   const student =
     students.find(
-      item => item.id === studentId
+      item => sameId(item.id, studentId)
     );
 
   if (!student) {
@@ -1380,7 +1396,7 @@ function exportCsv() {
     const allStudentSessions =
       serviceSessions.filter(
         session =>
-          session.student_id === student.id
+          sameId(session.student_id, student.id)
       );
 
     const visibleSessions =
@@ -1692,6 +1708,16 @@ function clearMessage(element) {
 
   element.className =
     "message";
+}
+
+
+// ======================================================
+// ID COMPARISON HELPER
+// Handles IDs returned as strings or numbers.
+// ======================================================
+
+function sameId(value1, value2) {
+  return String(value1) === String(value2);
 }
 
 

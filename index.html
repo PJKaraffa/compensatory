@@ -12,6 +12,7 @@
       <h1>SPED Compensatory Services</h1>
       <p id="welcomeMessage"></p>
     </div>
+
     <div class="header-actions">
       <button id="addStudentButton" class="secondary-button hidden" type="button">Add Student</button>
       <button id="exportButton" class="secondary-button" type="button">Export CSV</button>
@@ -43,7 +44,9 @@
         <h2 id="studentModalTitle">Add Student</h2>
         <button class="close-button" type="button" data-close="studentModal">&times;</button>
       </div>
+
       <input id="studentRecordId" type="hidden">
+
       <div class="form-grid">
         <div><label for="studentId">Student ID</label><input id="studentId" type="text"></div>
         <div><label for="firstName">First Name</label><input id="firstName" type="text"></div>
@@ -52,6 +55,7 @@
         <div><label for="grade">Grade</label><input id="grade" type="text"></div>
         <div><label for="compHours">Compensatory Hours</label><input id="compHours" type="number" min="0" step="0.25"></div>
       </div>
+
       <div class="modal-actions">
         <button class="secondary-button" type="button" data-close="studentModal">Cancel</button>
         <button id="saveStudentButton" class="primary-button" type="button">Save Student</button>
@@ -66,14 +70,17 @@
         <h2>Add Service Session</h2>
         <button class="close-button" type="button" data-close="serviceModal">&times;</button>
       </div>
+
       <input id="serviceStudentId" type="hidden">
       <div id="serviceStudentName" class="student-highlight"></div>
+
       <div class="form-grid">
         <div><label for="serviceDate">Date</label><input id="serviceDate" type="date"></div>
         <div><label for="startTime">Start Time</label><input id="startTime" type="time"></div>
         <div><label for="endTime">End Time</label><input id="endTime" type="time"></div>
         <div class="full-width"><label for="serviceNotes">Notes</label><textarea id="serviceNotes" rows="4" placeholder="Optional service notes"></textarea></div>
       </div>
+
       <div class="modal-actions">
         <button class="secondary-button" type="button" data-close="serviceModal">Cancel</button>
         <button id="saveServiceButton" class="primary-button" type="button">Save Session</button>
