@@ -17,18 +17,33 @@ async function initializeApp() {
 
   currentUser = data.session.user;
 
-  const { data: profile, error } = await supabaseClient
-    .from("profiles")
-    .select("id, full_name, role")
-    .eq("id", currentUser.id)
-    .single();
+ const { data: profile, error } = await supabaseClient
+  .from("profiles")
+  .select("id, full_name, role")
+  .eq("id", currentUser.id)
+  .maybeSingle();
 
-  if (error || !profile) {
-    await supabaseClient.auth.signOut();
-    window.location.href = "login.html";
-    return;
-  }
+if (error) {
+  console.error("Profile error:", error);
 
+  alert(
+    "Login worked, but the profile could not be loaded: " +
+    error.message
+  );
+
+  return;
+}
+
+if (!profile) {
+  alert(
+    "Login worked, but no profile record exists for this user. " +
+    "Add the user's UUID to the profiles table."
+  );
+
+  await supabaseClient.auth.signOut();
+  window.location.href = "login.html";
+  return;
+}
   currentProfile = profile;
 
   document.getElementById("welcomeMessage").textContent =
