@@ -158,3 +158,13 @@ label{display:block;margin:14px 0 7px;font-size:14px;font-weight:700;color:var(-
 .import-errors li {
   margin-bottom: 7px;
 }
+
+
+.required-mark {
+  color: var(--red);
+  font-weight: 800;
+}
+
+#refreshButton:disabled {
+  min-width: 96px;
+}
