@@ -15,6 +15,9 @@
 
     <div class="header-actions">
       <button id="addStudentButton" class="secondary-button hidden" type="button">Add Student</button>
+      <button id="importStudentsButton" class="secondary-button hidden" type="button">Import Students</button>
+      <button id="downloadTemplateButton" class="secondary-button hidden" type="button">CSV Template</button>
+      <input id="studentCsvInput" class="hidden" type="file" accept=".csv,text/csv">
       <button id="exportButton" class="secondary-button" type="button">Export CSV</button>
       <button id="logoutButton" class="danger-button" type="button">Logout</button>
     </div>
@@ -58,6 +61,12 @@
         <div><label for="school">School</label><input id="school" type="text"></div>
         <div><label for="grade">Grade</label><input id="grade" type="text"></div>
         <div><label for="compHours">Compensatory Hours</label><input id="compHours" type="number" min="0" step="0.25"></div>
+        <div>
+          <label for="assignedProvider">Assigned Provider</label>
+          <select id="assignedProvider">
+            <option value="">Select Provider</option>
+          </select>
+        </div>
       </div>
 
       <div class="modal-actions">
@@ -90,6 +99,19 @@
         <button id="saveServiceButton" class="primary-button" type="button">Save Session</button>
       </div>
       <p id="serviceMessage" class="message"></p>
+    </div>
+  </div>
+
+  <div id="importModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Student Import Results</h2>
+        <button class="close-button" type="button" data-close="importModal">&times;</button>
+      </div>
+      <div id="importResults" class="import-results"></div>
+      <div class="modal-actions">
+        <button class="primary-button" type="button" data-close="importModal">Close</button>
+      </div>
     </div>
   </div>
 

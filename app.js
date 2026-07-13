@@ -9,6 +9,7 @@ let currentProfile = null;
 let students = [];
 let serviceSessions = [];
 let studentHourTotals = [];
+let providers = [];
 
 const expandedStudentIds = new Set();
 let lastOpenedStudentId = null;
@@ -76,6 +77,15 @@ function attachEvents() {
   const exportButton =
     document.getElementById("exportButton");
 
+  const importStudentsButton =
+    document.getElementById("importStudentsButton");
+
+  const downloadTemplateButton =
+    document.getElementById("downloadTemplateButton");
+
+  const studentCsvInput =
+    document.getElementById("studentCsvInput");
+
   const searchInput =
     document.getElementById("searchInput");
 
@@ -131,6 +141,27 @@ function attachEvents() {
     exportButton.addEventListener(
       "click",
       exportCsv
+    );
+  }
+
+  if (importStudentsButton) {
+    importStudentsButton.addEventListener(
+      "click",
+      () => studentCsvInput?.click()
+    );
+  }
+
+  if (downloadTemplateButton) {
+    downloadTemplateButton.addEventListener(
+      "click",
+      downloadStudentTemplate
+    );
+  }
+
+  if (studentCsvInput) {
+    studentCsvInput.addEventListener(
+      "change",
+      importStudentsFromCsv
     );
   }
 
@@ -306,6 +337,12 @@ function displayCurrentUser() {
   const completedLabel =
     document.getElementById("completedLabel");
 
+  const importStudentsButton =
+    document.getElementById("importStudentsButton");
+
+  const downloadTemplateButton =
+    document.getElementById("downloadTemplateButton");
+
 
   if (welcomeMessage) {
     welcomeMessage.textContent =
@@ -327,8 +364,24 @@ function displayCurrentUser() {
       addStudentButton.classList.remove(
         "hidden"
       );
+
+      importStudentsButton?.classList.remove(
+        "hidden"
+      );
+
+      downloadTemplateButton?.classList.remove(
+        "hidden"
+      );
     } else {
       addStudentButton.classList.add(
+        "hidden"
+      );
+
+      importStudentsButton?.classList.add(
+        "hidden"
+      );
+
+      downloadTemplateButton?.classList.add(
         "hidden"
       );
     }
@@ -391,7 +444,15 @@ async function loadDashboard() {
   const studentRequest =
     supabaseClient
       .from("students")
-      .select("*")
+      .select(`
+        *,
+        assigned_provider:profiles!students_assigned_provider_id_fkey
+        (
+          id,
+          full_name,
+          email
+        )
+      `)
       .eq("active", true)
       .order("last_name", {
         ascending: true
@@ -429,14 +490,28 @@ async function loadDashboard() {
     supabaseClient
       .rpc("get_student_hour_totals");
 
+  const providersRequest =
+    currentProfile.role === "administrator"
+      ? supabaseClient
+          .from("profiles")
+          .select("id, full_name, email, role")
+          .eq("role", "provider")
+          .order("full_name")
+      : Promise.resolve({
+          data: [],
+          error: null
+        });
+
   const [
     studentResult,
     serviceResult,
-    totalsResult
+    totalsResult,
+    providersResult
   ] = await Promise.all([
     studentRequest,
     serviceRequest,
-    totalsRequest
+    totalsRequest,
+    providersRequest
   ]);
 
   if (studentResult.error) {
@@ -469,6 +544,21 @@ async function loadDashboard() {
     return;
   }
 
+  if (providersResult.error) {
+    console.error(
+      "Provider load error:",
+      providersResult.error
+    );
+
+    showMessage(
+      appMessage,
+      providersResult.error.message,
+      "error"
+    );
+
+    return;
+  }
+
   if (totalsResult.error) {
     console.error(
       "Student totals error:",
@@ -493,6 +583,10 @@ async function loadDashboard() {
   studentHourTotals =
     totalsResult.data || [];
 
+  providers =
+    providersResult.data || [];
+
+  buildProviderDropdown();
   buildSchoolFilter();
   renderStudents();
   renderSummary();
@@ -543,7 +637,9 @@ function renderStudents() {
         student.last_name,
         fullName,
         student.school,
-        student.grade
+        student.grade,
+        student.assigned_provider?.full_name,
+        student.assigned_provider?.email
       ];
 
       const matchesSearch =
@@ -743,6 +839,20 @@ function buildStudentCard(student) {
                 • Grade
                 ${escapeHtml(student.grade)}
               </p>
+
+              ${
+                currentProfile.role === "administrator"
+                  ? `
+                    <span class="provider-badge">
+                      Assigned:
+                      ${escapeHtml(
+                        student.assigned_provider?.full_name ||
+                        "Unassigned"
+                      )}
+                    </span>
+                  `
+                  : ""
+              }
             </div>
           </div>
 
@@ -1090,6 +1200,11 @@ function openAddStudentModal() {
     ""
   );
 
+  setValue(
+    "assignedProvider",
+    ""
+  );
+
   clearMessage(
     document.getElementById(
       "studentMessage"
@@ -1173,6 +1288,11 @@ function openEditStudentModal(
     student.comp_hours
   );
 
+  setValue(
+    "assignedProvider",
+    student.assigned_provider_id || ""
+  );
+
   clearMessage(
     document.getElementById(
       "studentMessage"
@@ -1250,6 +1370,11 @@ async function saveStudent() {
         )
       ),
 
+    assigned_provider_id:
+      getValue(
+        "assignedProvider"
+      ) || null,
+
     active:
       true
   };
@@ -1270,10 +1395,12 @@ async function saveStudent() {
     )
     ||
     studentData.comp_hours < 0
+    ||
+    !studentData.assigned_provider_id
   ) {
     showMessage(
       studentMessage,
-      "Complete every student field.",
+      "Complete every student field and select an assigned provider.",
       "error"
     );
 
@@ -1770,7 +1897,9 @@ function exportCsv() {
       "Start Time",
       "End Time",
       "Session Hours",
-      "Notes"
+      "Notes",
+      "Assigned Provider",
+      "Assigned Provider Email"
     ]
   ];
 
@@ -1825,7 +1954,9 @@ function exportCsv() {
         "",
         "",
         "",
-        ""
+        "",
+        student.assigned_provider?.full_name || "",
+        student.assigned_provider?.email || ""
       ]);
 
       return;
@@ -1856,7 +1987,9 @@ function exportCsv() {
           Number(
             session.hours || 0
           ).toFixed(2),
-          session.notes || ""
+          session.notes || "",
+          student.assigned_provider?.full_name || "",
+          student.assigned_provider?.email || ""
         ]);
       }
     );
@@ -1953,6 +2086,496 @@ function collapseAllStudents() {
   lastOpenedStudentId = null;
 
   renderStudents();
+}
+
+
+// ======================================================
+// PROVIDER DROPDOWN
+// ======================================================
+
+function buildProviderDropdown() {
+  const select =
+    document.getElementById(
+      "assignedProvider"
+    );
+
+  if (!select) {
+    return;
+  }
+
+  const currentValue =
+    select.value;
+
+  select.innerHTML =
+    `<option value="">Select Provider</option>` +
+    providers
+      .map(provider => `
+        <option value="${escapeHtml(provider.id)}">
+          ${escapeHtml(provider.full_name)}
+          ${provider.email ? ` — ${escapeHtml(provider.email)}` : ""}
+        </option>
+      `)
+      .join("");
+
+  select.value =
+    providers.some(provider =>
+      sameId(
+        provider.id,
+        currentValue
+      )
+    )
+      ? currentValue
+      : "";
+}
+
+
+// ======================================================
+// STUDENT CSV TEMPLATE
+// ======================================================
+
+function downloadStudentTemplate() {
+  const rows = [
+    [
+      "Student ID",
+      "First Name",
+      "Last Name",
+      "School",
+      "Grade",
+      "Comp Hours",
+      "Provider Email"
+    ],
+    [
+      "123456",
+      "John",
+      "Smith",
+      "Central High School",
+      "12",
+      "25",
+      "provider@bridgeportedu.net"
+    ]
+  ];
+
+  downloadCsvRows(
+    rows,
+    "student_import_template.csv"
+  );
+}
+
+
+// ======================================================
+// IMPORT STUDENTS FROM CSV
+// ======================================================
+
+async function importStudentsFromCsv(event) {
+  const file =
+    event.target.files?.[0];
+
+  event.target.value = "";
+
+  if (!file) {
+    return;
+  }
+
+  if (
+    currentProfile.role !==
+    "administrator"
+  ) {
+    alert(
+      "Only administrators can import students."
+    );
+
+    return;
+  }
+
+  const text =
+    await file.text();
+
+  const rows =
+    parseCsv(text);
+
+  if (rows.length < 2) {
+    showImportResults(
+      0,
+      [
+        "The CSV file does not contain any student rows."
+      ]
+    );
+
+    return;
+  }
+
+  const headers =
+    rows[0].map(value =>
+      normalizeHeader(value)
+    );
+
+  const requiredHeaders = [
+    "studentid",
+    "firstname",
+    "lastname",
+    "school",
+    "grade",
+    "comphours",
+    "provideremail"
+  ];
+
+  const missingHeaders =
+    requiredHeaders.filter(header =>
+      !headers.includes(header)
+    );
+
+  if (missingHeaders.length) {
+    showImportResults(
+      0,
+      [
+        `Missing columns: ${missingHeaders.join(", ")}`
+      ]
+    );
+
+    return;
+  }
+
+  const providerByEmail =
+    new Map(
+      providers
+        .filter(provider =>
+          provider.email
+        )
+        .map(provider => [
+          provider.email
+            .trim()
+            .toLowerCase(),
+          provider
+        ])
+    );
+
+  const records = [];
+  const errors = [];
+
+  rows
+    .slice(1)
+    .forEach((row, index) => {
+      const rowNumber =
+        index + 2;
+
+      if (
+        row.every(value =>
+          !String(value || "").trim()
+        )
+      ) {
+        return;
+      }
+
+      const record = {};
+
+      headers.forEach(
+        (header, columnIndex) => {
+          record[header] =
+            String(
+              row[columnIndex] ?? ""
+            ).trim();
+        }
+      );
+
+      const provider =
+        providerByEmail.get(
+          record.provideremail
+            .toLowerCase()
+        );
+
+      const compHours =
+        Number(
+          record.comphours
+        );
+
+      if (
+        !record.studentid ||
+        !record.firstname ||
+        !record.lastname ||
+        !record.school ||
+        !record.grade ||
+        !record.provideremail
+      ) {
+        errors.push(
+          `Row ${rowNumber}: One or more required values are blank.`
+        );
+
+        return;
+      }
+
+      if (
+        Number.isNaN(compHours) ||
+        compHours < 0
+      ) {
+        errors.push(
+          `Row ${rowNumber}: Comp Hours must be zero or greater.`
+        );
+
+        return;
+      }
+
+      if (!provider) {
+        errors.push(
+          `Row ${rowNumber}: No provider profile was found for ${record.provideremail}.`
+        );
+
+        return;
+      }
+
+      records.push({
+        student_id:
+          record.studentid,
+
+        first_name:
+          record.firstname,
+
+        last_name:
+          record.lastname,
+
+        school:
+          record.school,
+
+        grade:
+          record.grade,
+
+        comp_hours:
+          compHours,
+
+        assigned_provider_id:
+          provider.id,
+
+        active:
+          true,
+
+        created_by:
+          currentUser.id
+      });
+    });
+
+  if (!records.length) {
+    showImportResults(
+      0,
+      errors
+    );
+
+    return;
+  }
+
+  const { error } =
+    await supabaseClient
+      .from("students")
+      .upsert(
+        records,
+        {
+          onConflict:
+            "student_id"
+        }
+      );
+
+  if (error) {
+    errors.unshift(
+      error.message
+    );
+
+    showImportResults(
+      0,
+      errors
+    );
+
+    return;
+  }
+
+  showImportResults(
+    records.length,
+    errors
+  );
+
+  await loadDashboard();
+}
+
+
+function showImportResults(
+  importedCount,
+  errors
+) {
+  const results =
+    document.getElementById(
+      "importResults"
+    );
+
+  if (!results) {
+    return;
+  }
+
+  results.innerHTML = `
+    <div class="import-summary">
+      ${importedCount} student record${importedCount === 1 ? "" : "s"} imported or updated.
+    </div>
+
+    ${
+      errors.length
+        ? `
+            <ul class="import-errors">
+              ${errors
+                .map(error =>
+                  `<li>${escapeHtml(error)}</li>`
+                )
+                .join("")}
+            </ul>
+          `
+        : ""
+    }
+  `;
+
+  openModal(
+    "importModal"
+  );
+}
+
+
+function normalizeHeader(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]/g, "");
+}
+
+
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let value = "";
+  let quoted = false;
+
+  for (
+    let index = 0;
+    index < text.length;
+    index += 1
+  ) {
+    const character =
+      text[index];
+
+    const nextCharacter =
+      text[index + 1];
+
+    if (
+      character === '"'
+      &&
+      quoted
+      &&
+      nextCharacter === '"'
+    ) {
+      value += '"';
+      index += 1;
+      continue;
+    }
+
+    if (
+      character === '"'
+    ) {
+      quoted = !quoted;
+      continue;
+    }
+
+    if (
+      character === ","
+      &&
+      !quoted
+    ) {
+      row.push(value);
+      value = "";
+      continue;
+    }
+
+    if (
+      (character === "\n" ||
+       character === "\r")
+      &&
+      !quoted
+    ) {
+      if (
+        character === "\r"
+        &&
+        nextCharacter === "\n"
+      ) {
+        index += 1;
+      }
+
+      row.push(value);
+      rows.push(row);
+      row = [];
+      value = "";
+      continue;
+    }
+
+    value += character;
+  }
+
+  if (
+    value.length ||
+    row.length
+  ) {
+    row.push(value);
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+
+function downloadCsvRows(
+  rows,
+  filename
+) {
+  const csv =
+    rows
+      .map(row =>
+        row
+          .map(value =>
+            csvEscape(value)
+          )
+          .join(",")
+      )
+      .join("\n");
+
+  const blob =
+    new Blob(
+      [csv],
+      {
+        type:
+          "text/csv;charset=utf-8;"
+      }
+    );
+
+  const url =
+    URL.createObjectURL(
+      blob
+    );
+
+  const link =
+    document.createElement(
+      "a"
+    );
+
+  link.href =
+    url;
+
+  link.download =
+    filename;
+
+  document.body.appendChild(
+    link
+  );
+
+  link.click();
+
+  document.body.removeChild(
+    link
+  );
+
+  URL.revokeObjectURL(
+    url
+  );
 }
 
 
