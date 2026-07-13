@@ -337,6 +337,12 @@ function displayCurrentUser() {
   const completedLabel =
     document.getElementById("completedLabel");
 
+  const studentCountLabel =
+    document.getElementById("studentCountLabel");
+
+  const remainingLabel =
+    document.getElementById("remainingLabel");
+
   const importStudentsButton =
     document.getElementById("importStudentsButton");
 
@@ -349,11 +355,23 @@ function displayCurrentUser() {
       `${currentProfile.full_name || currentUser.email} • ${capitalize(currentProfile.role)}`;
   }
 
+  if (studentCountLabel) {
+    studentCountLabel.textContent =
+      currentProfile.role === "administrator"
+        ? "Students"
+        : "Students Assigned";
+  }
+
   if (completedLabel) {
     completedLabel.textContent =
+      "Completed Hours";
+  }
+
+  if (remainingLabel) {
+    remainingLabel.textContent =
       currentProfile.role === "administrator"
-        ? "Completed Hours"
-        : "My Hours";
+        ? "Hours Left"
+        : "Hours Remaining";
   }
 
   if (addStudentButton) {
@@ -1031,6 +1049,21 @@ function buildServiceRow(session) {
 // ======================================================
 
 function renderSummary() {
+  /*
+    The students array is already restricted by RLS:
+
+    Administrator:
+      All active students.
+
+    Provider:
+      Only active students assigned to the logged-in provider.
+
+    get_student_hour_totals() follows the same assignment rule, while
+    counting every service delivered to each visible student. Therefore,
+    the dashboard shows the actual workload totals rather than only the
+    sessions entered by the logged-in provider.
+  */
+
   const totalAssigned =
     students.reduce(
       (sum, student) =>
@@ -1050,23 +1083,6 @@ function renderSummary() {
         ),
       0
     );
-
-  const providerCompleted =
-    sumHours(
-      serviceSessions.filter(
-        session =>
-          sameId(
-            session.provider_id,
-            currentUser.id
-          )
-      )
-    );
-
-  const displayedCompleted =
-    currentProfile.role ===
-    "administrator"
-      ? totalCompleted
-      : providerCompleted;
 
   const totalRemaining =
     studentHourTotals.reduce(
@@ -1090,7 +1106,7 @@ function renderSummary() {
 
   setText(
     "completedHours",
-    displayedCompleted.toFixed(2)
+    totalCompleted.toFixed(2)
   );
 
   setText(
@@ -1098,7 +1114,6 @@ function renderSummary() {
     totalRemaining.toFixed(2)
   );
 }
-
 
 // ======================================================
 // SCHOOL FILTER
