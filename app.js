@@ -112,7 +112,7 @@ function attachEvents() {
   if (refreshButton) {
     refreshButton.addEventListener(
       "click",
-      loadDashboard
+      refreshDashboard
     );
   }
 
@@ -450,6 +450,59 @@ function redirectToLogin() {
 
 
 // ======================================================
+// REFRESH DASHBOARD
+// ======================================================
+
+async function refreshDashboard() {
+  const refreshButton =
+    document.getElementById(
+      "refreshButton"
+    );
+
+  const originalText =
+    refreshButton?.textContent ||
+    "Refresh";
+
+  if (refreshButton) {
+    refreshButton.disabled = true;
+    refreshButton.textContent = "Refreshing...";
+  }
+
+  try {
+    await loadDashboard();
+
+    showMessage(
+      document.getElementById(
+        "appMessage"
+      ),
+      "Dashboard refreshed.",
+      "success"
+    );
+  } catch (error) {
+    console.error(
+      "Refresh error:",
+      error
+    );
+
+    showMessage(
+      document.getElementById(
+        "appMessage"
+      ),
+      error.message ||
+      "The dashboard could not be refreshed.",
+      "error"
+    );
+  } finally {
+    if (refreshButton) {
+      refreshButton.disabled = false;
+      refreshButton.textContent =
+        originalText;
+    }
+  }
+}
+
+
+// ======================================================
 // LOAD DASHBOARD
 // ======================================================
 
@@ -544,7 +597,7 @@ async function loadDashboard() {
       "error"
     );
 
-    return;
+    throw studentResult.error;
   }
 
   if (serviceResult.error) {
@@ -559,7 +612,7 @@ async function loadDashboard() {
       "error"
     );
 
-    return;
+    throw serviceResult.error;
   }
 
   if (providersResult.error) {
@@ -574,7 +627,7 @@ async function loadDashboard() {
       "error"
     );
 
-    return;
+    throw providersResult.error;
   }
 
   if (totalsResult.error) {
@@ -589,7 +642,7 @@ async function loadDashboard() {
       "error"
     );
 
-    return;
+    throw totalsResult.error;
   }
 
   students =
@@ -1597,10 +1650,12 @@ async function saveServiceSession() {
     !startTime
     ||
     !endTime
+    ||
+    !notes
   ) {
     showMessage(
       serviceMessage,
-      "Enter the date, start time, and end time.",
+      "Enter the date, start time, end time, and service notes.",
       "error"
     );
 
@@ -1694,7 +1749,7 @@ async function saveServiceSession() {
           calculatedHours,
 
         notes:
-          notes || null
+          notes
       });
 
   setButtonBusy(
