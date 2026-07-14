@@ -77,11 +77,17 @@ function attachEvents() {
   const exportButton =
     document.getElementById("exportButton");
 
+  const reportsButton =
+    document.getElementById("reportsButton");
+
   const importStudentsButton =
     document.getElementById("importStudentsButton");
 
   const downloadTemplateButton =
     document.getElementById("downloadTemplateButton");
+
+  const reportsButton =
+    document.getElementById("reportsButton");
 
   const studentCsvInput =
     document.getElementById("studentCsvInput");
@@ -143,6 +149,22 @@ function attachEvents() {
       exportCsv
     );
   }
+
+  if (reportsButton) {
+    reportsButton.addEventListener(
+      "click",
+      openReportsModal
+    );
+  }
+
+  document
+    .querySelectorAll("[data-report]")
+    .forEach(button => {
+      button.addEventListener(
+        "click",
+        () => runReport(button.dataset.report)
+      );
+    });
 
   if (importStudentsButton) {
     importStudentsButton.addEventListener(
@@ -390,6 +412,10 @@ function displayCurrentUser() {
       downloadTemplateButton?.classList.remove(
         "hidden"
       );
+
+      reportsButton?.classList.remove(
+        "hidden"
+      );
     } else {
       addStudentButton.classList.add(
         "hidden"
@@ -400,6 +426,10 @@ function displayCurrentUser() {
       );
 
       downloadTemplateButton?.classList.add(
+        "hidden"
+      );
+
+      reportsButton?.classList.add(
         "hidden"
       );
     }
@@ -659,6 +689,7 @@ async function loadDashboard() {
 
   buildProviderDropdown();
   buildSchoolFilter();
+  buildReportDropdowns();
   renderStudents();
   renderSummary();
 }
@@ -2646,6 +2677,1171 @@ function downloadCsvRows(
   URL.revokeObjectURL(
     url
   );
+}
+
+
+// ======================================================
+// REPORTS
+// ======================================================
+
+function openReportsModal() {
+  if (
+    currentProfile.role !==
+    "administrator"
+  ) {
+    return;
+  }
+
+  buildReportDropdowns();
+
+  const monthInput =
+    document.getElementById(
+      "reportProviderMonth"
+    );
+
+  if (
+    monthInput &&
+    !monthInput.value
+  ) {
+    monthInput.value =
+      getTodayDate().slice(0, 7);
+  }
+
+  clearMessage(
+    document.getElementById(
+      "reportsMessage"
+    )
+  );
+
+  openModal(
+    "reportsModal"
+  );
+}
+
+
+function buildReportDropdowns() {
+  const studentSelect =
+    document.getElementById(
+      "reportStudent"
+    );
+
+  const providerSelect =
+    document.getElementById(
+      "reportProvider"
+    );
+
+  const schoolSelect =
+    document.getElementById(
+      "reportSchool"
+    );
+
+  if (studentSelect) {
+    const currentValue =
+      studentSelect.value;
+
+    studentSelect.innerHTML =
+      `<option value="">Select Student</option>` +
+      students
+        .map(student => `
+          <option value="${escapeHtml(student.id)}">
+            ${escapeHtml(student.last_name)},
+            ${escapeHtml(student.first_name)}
+            — ${escapeHtml(student.student_id)}
+          </option>
+        `)
+        .join("");
+
+    studentSelect.value =
+      students.some(student =>
+        sameId(
+          student.id,
+          currentValue
+        )
+      )
+        ? currentValue
+        : "";
+  }
+
+  if (providerSelect) {
+    const currentValue =
+      providerSelect.value;
+
+    providerSelect.innerHTML =
+      `<option value="">Select Provider</option>` +
+      providers
+        .map(provider => `
+          <option value="${escapeHtml(provider.id)}">
+            ${escapeHtml(provider.full_name)}
+          </option>
+        `)
+        .join("");
+
+    providerSelect.value =
+      providers.some(provider =>
+        sameId(
+          provider.id,
+          currentValue
+        )
+      )
+        ? currentValue
+        : "";
+  }
+
+  if (schoolSelect) {
+    const currentValue =
+      schoolSelect.value;
+
+    const schools =
+      [
+        ...new Set(
+          students
+            .map(student =>
+              student.school
+            )
+            .filter(Boolean)
+        )
+      ].sort();
+
+    schoolSelect.innerHTML =
+      `<option value="">Select School</option>` +
+      schools
+        .map(school => `
+          <option value="${escapeHtml(school)}">
+            ${escapeHtml(school)}
+          </option>
+        `)
+        .join("");
+
+    schoolSelect.value =
+      schools.includes(currentValue)
+        ? currentValue
+        : "";
+  }
+}
+
+
+async function runReport(
+  reportName
+) {
+  const message =
+    document.getElementById(
+      "reportsMessage"
+    );
+
+  clearMessage(message);
+
+  try {
+    switch (reportName) {
+      case "student-pdf":
+        createStudentHistoryPdf();
+        break;
+
+      case "student-excel":
+        createStudentHistoryExcel();
+        break;
+
+      case "provider-pdf":
+        createProviderMonthlyPdf();
+        break;
+
+      case "provider-excel":
+        createProviderMonthlyExcel();
+        break;
+
+      case "school-pdf":
+        createSchoolSummaryPdf();
+        break;
+
+      case "school-excel":
+        createSchoolSummaryExcel();
+        break;
+
+      case "completed-month-pdf":
+        createCompletedByMonthPdf();
+        break;
+
+      case "completed-month-excel":
+        createCompletedByMonthExcel();
+        break;
+
+      case "remaining-school-pdf":
+        createRemainingBySchoolPdf();
+        break;
+
+      case "remaining-school-excel":
+        createRemainingBySchoolExcel();
+        break;
+    }
+  } catch (error) {
+    console.error(
+      "Report error:",
+      error
+    );
+
+    showMessage(
+      message,
+      error.message ||
+      "The report could not be created.",
+      "error"
+    );
+  }
+}
+
+
+function requireStudentSelection() {
+  const studentId =
+    getValue(
+      "reportStudent"
+    );
+
+  const student =
+    students.find(item =>
+      sameId(
+        item.id,
+        studentId
+      )
+    );
+
+  if (!student) {
+    throw new Error(
+      "Select a student."
+    );
+  }
+
+  return student;
+}
+
+
+function requireProviderSelection() {
+  const providerId =
+    getValue(
+      "reportProvider"
+    );
+
+  const provider =
+    providers.find(item =>
+      sameId(
+        item.id,
+        providerId
+      )
+    );
+
+  if (!provider) {
+    throw new Error(
+      "Select a provider."
+    );
+  }
+
+  return provider;
+}
+
+
+function requireProviderMonth() {
+  const month =
+    getValue(
+      "reportProviderMonth"
+    );
+
+  if (!month) {
+    throw new Error(
+      "Select a month."
+    );
+  }
+
+  return month;
+}
+
+
+function requireSchoolSelection() {
+  const school =
+    getValue(
+      "reportSchool"
+    );
+
+  if (!school) {
+    throw new Error(
+      "Select a school."
+    );
+  }
+
+  return school;
+}
+
+
+function createStudentHistoryPdf() {
+  const student =
+    requireStudentSelection();
+
+  const totals =
+    getStudentHourTotal(
+      student.id
+    );
+
+  const sessions =
+    serviceSessions
+      .filter(session =>
+        sameId(
+          session.student_id,
+          student.id
+        )
+      )
+      .sort((a, b) =>
+        String(a.service_date)
+          .localeCompare(
+            String(b.service_date)
+          )
+      );
+
+  const doc =
+    createPdfDocument(
+      "Student History Report"
+    );
+
+  let y = 28;
+
+  doc.setFontSize(12);
+
+  [
+    `Student: ${student.last_name}, ${student.first_name}`,
+    `Student ID: ${student.student_id}`,
+    `School: ${student.school}`,
+    `Grade: ${student.grade}`,
+    `Assigned Provider: ${student.assigned_provider?.full_name || "Unassigned"}`,
+    `Comp Hours: ${Number(student.comp_hours || 0).toFixed(2)}`,
+    `Completed Hours: ${totals.completedHours.toFixed(2)}`,
+    `Hours Left: ${totals.hoursLeft.toFixed(2)}`
+  ].forEach(line => {
+    doc.text(
+      line,
+      14,
+      y
+    );
+
+    y += 7;
+  });
+
+  doc.autoTable({
+    startY:
+      y + 4,
+
+    head: [[
+      "Provider",
+      "Date",
+      "Start",
+      "End",
+      "Hours",
+      "Notes"
+    ]],
+
+    body:
+      sessions.map(session => [
+        session.provider?.full_name || "Provider",
+        formatDate(session.service_date),
+        formatTime(session.start_time),
+        formatTime(session.end_time),
+        Number(session.hours || 0).toFixed(2),
+        session.notes || ""
+      ]),
+
+    styles: {
+      fontSize: 8,
+      cellPadding: 2
+    }
+  });
+
+  doc.save(
+    `student_history_${safeFilename(student.student_id)}.pdf`
+  );
+}
+
+
+function createStudentHistoryExcel() {
+  const student =
+    requireStudentSelection();
+
+  const totals =
+    getStudentHourTotal(
+      student.id
+    );
+
+  const sessions =
+    serviceSessions.filter(session =>
+      sameId(
+        session.student_id,
+        student.id
+      )
+    );
+
+  const summaryRows = [
+    ["Student ID", student.student_id],
+    ["Student Name", `${student.last_name}, ${student.first_name}`],
+    ["School", student.school],
+    ["Grade", student.grade],
+    ["Assigned Provider", student.assigned_provider?.full_name || "Unassigned"],
+    ["Comp Hours", Number(student.comp_hours || 0)],
+    ["Completed Hours", totals.completedHours],
+    ["Hours Left", totals.hoursLeft]
+  ];
+
+  const detailRows =
+    sessions.map(session => ({
+      Provider:
+        session.provider?.full_name ||
+        "Provider",
+
+      Date:
+        formatDate(
+          session.service_date
+        ),
+
+      "Start Time":
+        formatTime(
+          session.start_time
+        ),
+
+      "End Time":
+        formatTime(
+          session.end_time
+        ),
+
+      Hours:
+        Number(
+          session.hours || 0
+        ),
+
+      Notes:
+        session.notes || ""
+    }));
+
+  exportWorkbook(
+    [
+      {
+        name:
+          "Student Summary",
+
+        rows:
+          summaryRows
+      },
+      {
+        name:
+          "Service History",
+
+        json:
+          detailRows
+      }
+    ],
+    `student_history_${safeFilename(student.student_id)}.xlsx`
+  );
+}
+
+
+function getProviderMonthlyData() {
+  const provider =
+    requireProviderSelection();
+
+  const month =
+    requireProviderMonth();
+
+  const sessions =
+    serviceSessions.filter(session =>
+      sameId(
+        session.provider_id,
+        provider.id
+      )
+      &&
+      String(
+        session.service_date || ""
+      ).startsWith(month)
+    );
+
+  const rows =
+    sessions.map(session => {
+      const student =
+        students.find(item =>
+          sameId(
+            item.id,
+            session.student_id
+          )
+        );
+
+      return {
+        Student:
+          student
+            ? `${student.last_name}, ${student.first_name}`
+            : "Student",
+
+        "Student ID":
+          student?.student_id || "",
+
+        School:
+          student?.school || "",
+
+        Date:
+          formatDate(
+            session.service_date
+          ),
+
+        "Start Time":
+          formatTime(
+            session.start_time
+          ),
+
+        "End Time":
+          formatTime(
+            session.end_time
+          ),
+
+        Hours:
+          Number(
+            session.hours || 0
+          ),
+
+        Notes:
+          session.notes || ""
+      };
+    });
+
+  const totalHours =
+    rows.reduce(
+      (sum, row) =>
+        sum +
+        Number(
+          row.Hours || 0
+        ),
+      0
+    );
+
+  return {
+    provider,
+    month,
+    rows,
+    totalHours
+  };
+}
+
+
+function createProviderMonthlyPdf() {
+  const data =
+    getProviderMonthlyData();
+
+  const doc =
+    createPdfDocument(
+      "Provider Monthly Summary"
+    );
+
+  doc.setFontSize(12);
+
+  doc.text(
+    `Provider: ${data.provider.full_name}`,
+    14,
+    28
+  );
+
+  doc.text(
+    `Month: ${formatMonthLabel(data.month)}`,
+    14,
+    35
+  );
+
+  doc.text(
+    `Total Hours: ${data.totalHours.toFixed(2)}`,
+    14,
+    42
+  );
+
+  doc.autoTable({
+    startY:
+      49,
+
+    head: [[
+      "Student",
+      "ID",
+      "School",
+      "Date",
+      "Start",
+      "End",
+      "Hours",
+      "Notes"
+    ]],
+
+    body:
+      data.rows.map(row => [
+        row.Student,
+        row["Student ID"],
+        row.School,
+        row.Date,
+        row["Start Time"],
+        row["End Time"],
+        row.Hours.toFixed(2),
+        row.Notes
+      ]),
+
+    styles: {
+      fontSize: 7,
+      cellPadding: 2
+    }
+  });
+
+  doc.save(
+    `provider_monthly_${safeFilename(data.provider.full_name)}_${data.month}.pdf`
+  );
+}
+
+
+function createProviderMonthlyExcel() {
+  const data =
+    getProviderMonthlyData();
+
+  exportWorkbook(
+    [
+      {
+        name:
+          "Summary",
+
+        rows: [
+          ["Provider", data.provider.full_name],
+          ["Month", formatMonthLabel(data.month)],
+          ["Total Hours", data.totalHours]
+        ]
+      },
+      {
+        name:
+          "Service Detail",
+
+        json:
+          data.rows
+      }
+    ],
+    `provider_monthly_${safeFilename(data.provider.full_name)}_${data.month}.xlsx`
+  );
+}
+
+
+function getSchoolSummaryData() {
+  const school =
+    requireSchoolSelection();
+
+  const schoolStudents =
+    students.filter(student =>
+      student.school === school
+    );
+
+  const rows =
+    schoolStudents.map(student => {
+      const totals =
+        getStudentHourTotal(
+          student.id
+        );
+
+      return {
+        "Student ID":
+          student.student_id,
+
+        Student:
+          `${student.last_name}, ${student.first_name}`,
+
+        Grade:
+          student.grade,
+
+        "Assigned Provider":
+          student.assigned_provider?.full_name ||
+          "Unassigned",
+
+        "Comp Hours":
+          Number(
+            student.comp_hours || 0
+          ),
+
+        "Completed Hours":
+          totals.completedHours,
+
+        "Hours Left":
+          totals.hoursLeft
+      };
+    });
+
+  return {
+    school,
+    rows,
+
+    assigned:
+      rows.reduce(
+        (sum, row) =>
+          sum +
+          row["Comp Hours"],
+        0
+      ),
+
+    completed:
+      rows.reduce(
+        (sum, row) =>
+          sum +
+          row["Completed Hours"],
+        0
+      ),
+
+    remaining:
+      rows.reduce(
+        (sum, row) =>
+          sum +
+          row["Hours Left"],
+        0
+      )
+  };
+}
+
+
+function createSchoolSummaryPdf() {
+  const data =
+    getSchoolSummaryData();
+
+  const doc =
+    createPdfDocument(
+      "School Summary"
+    );
+
+  doc.setFontSize(12);
+
+  doc.text(
+    `School: ${data.school}`,
+    14,
+    28
+  );
+
+  doc.text(
+    `Students: ${data.rows.length}`,
+    14,
+    35
+  );
+
+  doc.text(
+    `Assigned Hours: ${data.assigned.toFixed(2)}`,
+    14,
+    42
+  );
+
+  doc.text(
+    `Completed Hours: ${data.completed.toFixed(2)}`,
+    14,
+    49
+  );
+
+  doc.text(
+    `Hours Left: ${data.remaining.toFixed(2)}`,
+    14,
+    56
+  );
+
+  doc.autoTable({
+    startY:
+      63,
+
+    head: [[
+      "Student",
+      "ID",
+      "Grade",
+      "Provider",
+      "Assigned",
+      "Completed",
+      "Left"
+    ]],
+
+    body:
+      data.rows.map(row => [
+        row.Student,
+        row["Student ID"],
+        row.Grade,
+        row["Assigned Provider"],
+        row["Comp Hours"].toFixed(2),
+        row["Completed Hours"].toFixed(2),
+        row["Hours Left"].toFixed(2)
+      ]),
+
+    styles: {
+      fontSize: 8,
+      cellPadding: 2
+    }
+  });
+
+  doc.save(
+    `school_summary_${safeFilename(data.school)}.pdf`
+  );
+}
+
+
+function createSchoolSummaryExcel() {
+  const data =
+    getSchoolSummaryData();
+
+  exportWorkbook(
+    [
+      {
+        name:
+          "Summary",
+
+        rows: [
+          ["School", data.school],
+          ["Students", data.rows.length],
+          ["Assigned Hours", data.assigned],
+          ["Completed Hours", data.completed],
+          ["Hours Left", data.remaining]
+        ]
+      },
+      {
+        name:
+          "Students",
+
+        json:
+          data.rows
+      }
+    ],
+    `school_summary_${safeFilename(data.school)}.xlsx`
+  );
+}
+
+
+function getCompletedByMonthData() {
+  const totals =
+    new Map();
+
+  serviceSessions.forEach(session => {
+    const month =
+      String(
+        session.service_date || ""
+      ).slice(0, 7);
+
+    if (!month) {
+      return;
+    }
+
+    totals.set(
+      month,
+      (
+        totals.get(month) || 0
+      )
+      +
+      Number(
+        session.hours || 0
+      )
+    );
+  });
+
+  return [
+    ...totals.entries()
+  ]
+    .sort(
+      (a, b) =>
+        a[0].localeCompare(b[0])
+    )
+    .map(([month, hours]) => ({
+      Month:
+        formatMonthLabel(month),
+
+      "Completed Hours":
+        hours
+    }));
+}
+
+
+function createCompletedByMonthPdf() {
+  const rows =
+    getCompletedByMonthData();
+
+  const doc =
+    createPdfDocument(
+      "Hours Completed by Month"
+    );
+
+  doc.autoTable({
+    startY:
+      28,
+
+    head: [[
+      "Month",
+      "Completed Hours"
+    ]],
+
+    body:
+      rows.map(row => [
+        row.Month,
+        row["Completed Hours"].toFixed(2)
+      ])
+  });
+
+  doc.save(
+    "hours_completed_by_month.pdf"
+  );
+}
+
+
+function createCompletedByMonthExcel() {
+  exportWorkbook(
+    [
+      {
+        name:
+          "Completed by Month",
+
+        json:
+          getCompletedByMonthData()
+      }
+    ],
+    "hours_completed_by_month.xlsx"
+  );
+}
+
+
+function getRemainingBySchoolData() {
+  const totals =
+    new Map();
+
+  students.forEach(student => {
+    const school =
+      student.school ||
+      "Unknown School";
+
+    const current =
+      totals.get(school) || {
+        Students:
+          0,
+
+        "Assigned Hours":
+          0,
+
+        "Completed Hours":
+          0,
+
+        "Hours Left":
+          0
+      };
+
+    const studentTotals =
+      getStudentHourTotal(
+        student.id
+      );
+
+    current.Students +=
+      1;
+
+    current["Assigned Hours"] +=
+      Number(
+        student.comp_hours || 0
+      );
+
+    current["Completed Hours"] +=
+      studentTotals.completedHours;
+
+    current["Hours Left"] +=
+      studentTotals.hoursLeft;
+
+    totals.set(
+      school,
+      current
+    );
+  });
+
+  return [
+    ...totals.entries()
+  ]
+    .sort(
+      (a, b) =>
+        a[0].localeCompare(b[0])
+    )
+    .map(([school, values]) => ({
+      School:
+        school,
+
+      ...values
+    }));
+}
+
+
+function createRemainingBySchoolPdf() {
+  const rows =
+    getRemainingBySchoolData();
+
+  const doc =
+    createPdfDocument(
+      "Hours Remaining by School"
+    );
+
+  doc.autoTable({
+    startY:
+      28,
+
+    head: [[
+      "School",
+      "Students",
+      "Assigned",
+      "Completed",
+      "Hours Left"
+    ]],
+
+    body:
+      rows.map(row => [
+        row.School,
+        row.Students,
+        row["Assigned Hours"].toFixed(2),
+        row["Completed Hours"].toFixed(2),
+        row["Hours Left"].toFixed(2)
+      ]),
+
+    styles: {
+      fontSize: 8,
+      cellPadding: 2
+    }
+  });
+
+  doc.save(
+    "hours_remaining_by_school.pdf"
+  );
+}
+
+
+function createRemainingBySchoolExcel() {
+  exportWorkbook(
+    [
+      {
+        name:
+          "Remaining by School",
+
+        json:
+          getRemainingBySchoolData()
+      }
+    ],
+    "hours_remaining_by_school.xlsx"
+  );
+}
+
+
+function createPdfDocument(
+  title
+) {
+  const jsPdf =
+    window.jspdf?.jsPDF;
+
+  if (!jsPdf) {
+    throw new Error(
+      "The PDF library did not load."
+    );
+  }
+
+  const doc =
+    new jsPdf({
+      orientation:
+        "landscape",
+
+      unit:
+        "mm",
+
+      format:
+        "letter"
+    });
+
+  doc.setFontSize(18);
+
+  doc.text(
+    title,
+    14,
+    16
+  );
+
+  doc.setFontSize(9);
+
+  doc.text(
+    `Generated ${new Date().toLocaleString()}`,
+    14,
+    22
+  );
+
+  return doc;
+}
+
+
+function exportWorkbook(
+  sheets,
+  filename
+) {
+  if (!window.XLSX) {
+    throw new Error(
+      "The Excel library did not load."
+    );
+  }
+
+  const workbook =
+    XLSX.utils.book_new();
+
+  sheets.forEach(sheet => {
+    let worksheet;
+
+    if (sheet.json) {
+      worksheet =
+        XLSX.utils.json_to_sheet(
+          sheet.json
+        );
+    } else {
+      worksheet =
+        XLSX.utils.aoa_to_sheet(
+          sheet.rows || []
+        );
+    }
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      sheet.name.slice(0, 31)
+    );
+  });
+
+  XLSX.writeFile(
+    workbook,
+    filename
+  );
+}
+
+
+function formatMonthLabel(
+  monthValue
+) {
+  if (!monthValue) {
+    return "";
+  }
+
+  const [
+    year,
+    month
+  ] =
+    monthValue.split("-");
+
+  return new Date(
+    Number(year),
+    Number(month) - 1,
+    1
+  ).toLocaleDateString(
+    undefined,
+    {
+      month:
+        "long",
+
+      year:
+        "numeric"
+    }
+  );
+}
+
+
+function safeFilename(
+  value
+) {
+  return String(value || "report")
+    .trim()
+    .replaceAll(
+      /[^a-zA-Z0-9_-]+/g,
+      "_"
+    )
+    .replaceAll(
+      /^_+|_+$/g,
+      ""
+    );
 }
 
 
