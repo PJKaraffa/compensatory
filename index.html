@@ -18,6 +18,7 @@
       <button id="importStudentsButton" class="secondary-button hidden" type="button">Import Students</button>
       <button id="downloadTemplateButton" class="secondary-button hidden" type="button">CSV Template</button>
       <input id="studentCsvInput" class="hidden" type="file" accept=".csv,text/csv">
+      <button id="reportsButton" class="secondary-button hidden" type="button">Reports</button>
       <button id="exportButton" class="secondary-button" type="button">Export CSV</button>
       <button id="logoutButton" class="danger-button" type="button">Logout</button>
     </div>
@@ -115,8 +116,95 @@
     </div>
   </div>
 
+
+  <div id="reportsModal" class="modal hidden">
+    <div class="modal-card reports-modal-card">
+      <div class="modal-header">
+        <h2>Reports</h2>
+        <button class="close-button" type="button" data-close="reportsModal">&times;</button>
+      </div>
+
+      <div class="report-grid">
+
+        <section class="report-card">
+          <h3>Student History Report</h3>
+          <p>Complete service history, assigned hours, completed hours, and remaining hours for one student.</p>
+
+          <label for="reportStudent">Student</label>
+          <select id="reportStudent">
+            <option value="">Select Student</option>
+          </select>
+
+          <div class="report-actions">
+            <button class="primary-button" type="button" data-report="student-pdf">PDF</button>
+            <button class="secondary-button" type="button" data-report="student-excel">Excel</button>
+          </div>
+        </section>
+
+        <section class="report-card">
+          <h3>Provider Monthly Summary</h3>
+          <p>Monthly service totals and student details for a selected provider.</p>
+
+          <label for="reportProvider">Provider</label>
+          <select id="reportProvider">
+            <option value="">Select Provider</option>
+          </select>
+
+          <label for="reportProviderMonth">Month</label>
+          <input id="reportProviderMonth" type="month">
+
+          <div class="report-actions">
+            <button class="primary-button" type="button" data-report="provider-pdf">PDF</button>
+            <button class="secondary-button" type="button" data-report="provider-excel">Excel</button>
+          </div>
+        </section>
+
+        <section class="report-card">
+          <h3>School Summary</h3>
+          <p>Student counts, assigned hours, completed hours, and remaining hours for one school.</p>
+
+          <label for="reportSchool">School</label>
+          <select id="reportSchool">
+            <option value="">Select School</option>
+          </select>
+
+          <div class="report-actions">
+            <button class="primary-button" type="button" data-report="school-pdf">PDF</button>
+            <button class="secondary-button" type="button" data-report="school-excel">Excel</button>
+          </div>
+        </section>
+
+        <section class="report-card">
+          <h3>Hours Completed by Month</h3>
+          <p>Monthly completed service hours across the district.</p>
+
+          <div class="report-actions">
+            <button class="primary-button" type="button" data-report="completed-month-pdf">PDF</button>
+            <button class="secondary-button" type="button" data-report="completed-month-excel">Excel</button>
+          </div>
+        </section>
+
+        <section class="report-card">
+          <h3>Hours Remaining by School</h3>
+          <p>Current remaining compensatory hours summarized by school.</p>
+
+          <div class="report-actions">
+            <button class="primary-button" type="button" data-report="remaining-school-pdf">PDF</button>
+            <button class="secondary-button" type="button" data-report="remaining-school-excel">Excel</button>
+          </div>
+        </section>
+
+      </div>
+
+      <p id="reportsMessage" class="message"></p>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

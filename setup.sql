@@ -318,3 +318,29 @@ on public.service_sessions
 to authenticated;
 
 notify pgrst, 'reload schema';
+
+
+
+-- =========================================================
+-- REQUIRED SERVICE NOTES
+-- Run once in the Supabase SQL Editor.
+-- =========================================================
+
+-- Existing blank/null notes are preserved with a clear legacy label
+-- so the NOT NULL constraint can be enabled safely.
+update public.service_sessions
+set notes = 'Legacy service entry — notes were not recorded.'
+where notes is null
+   or btrim(notes) = '';
+
+alter table public.service_sessions
+alter column notes set not null;
+
+alter table public.service_sessions
+drop constraint if exists service_sessions_notes_not_blank;
+
+alter table public.service_sessions
+add constraint service_sessions_notes_not_blank
+check (btrim(notes) <> '');
+
+notify pgrst, 'reload schema';
